@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 type WebhookHandler struct{}
@@ -22,31 +23,31 @@ type ProcessByPidRequest struct {
 }
 
 type ProcessInfo struct {
-	ProcessID              int    `json:"processId"`
-	ParentProcessID        int    `json:"parentProcessId"`
-	ProcessName            string `json:"processName"`
-	ThreadCount            int    `json:"threadCount"`
-	HandleCount            int    `json:"handleCount"`
-	BasePriority           int    `json:"basePriority"`
-	CreateTime             string `json:"createTime"`
-	UserTime               string `json:"userTime"`
-	KernelTime             string `json:"kernelTime"`
-	WorkingSetSize         string `json:"workingSetSize"`
-	PeakWorkingSetSize     string `json:"peakWorkingSetSize"`
-	VirtualSize            string `json:"virtualSize"`
-	PeakVirtualSize        string `json:"peakVirtualSize"`
-	PagefileUsage          string `json:"pagefileUsage"`
-	PeakPagefileUsage      string `json:"peakPagefileUsage"`
-	PageFaultCount         int    `json:"pageFaultCount"`
-	ReadOperationCount     int64  `json:"readOperationCount"`
-	WriteOperationCount    int64  `json:"writeOperationCount"`
-	OtherOperationCount    int64  `json:"otherOperationCount"`
-	ReadTransferCount      int64  `json:"readTransferCount"`
-	WriteTransferCount     int64  `json:"writeTransferCount"`
-	OtherTransferCount     int64  `json:"otherTransferCount"`
-	CurrentProcessAddress  string `json:"currentProcessAddress"`
-	NextProcessAddress     string `json:"nextProcessAddress"`
-	PreviousProcessAddress string `json:"previousProcessAddress"`
+	ProcessID             int             `json:"processId"`
+	ParentProcessID       int             `json:"parentProcessId"`
+	ProcessName           string          `json:"processName"`
+	ThreadCount           int             `json:"threadCount"`
+	HandleCount           int             `json:"handleCount"`
+	BasePriority          int             `json:"basePriority"`
+	CreateTime            string          `json:"createTime"`
+	UserTime              string          `json:"userTime"`
+	KernelTime            string          `json:"kernelTime"`
+	WorkingSetSize        string          `json:"workingSetSize"`
+	PeakWorkingSetSize    string          `json:"peakWorkingSetSize"`
+	VirtualSize           string          `json:"virtualSize"`
+	PeakVirtualSize       string          `json:"peakVirtualSize"`
+	PagefileUsage         string          `json:"pagefileUsage"`
+	PeakPagefileUsage     string          `json:"peakPagefileUsage"`
+	PageFaultCount        int             `json:"pageFaultCount"`
+	ReadOperationCount    int64           `json:"readOperationCount"`
+	WriteOperationCount   int64           `json:"writeOperationCount"`
+	OtherOperationCount   int64           `json:"otherOperationCount"`
+	ReadTransferCount     int64           `json:"readTransferCount"`
+	WriteTransferCount    int64           `json:"writeTransferCount"`
+	OtherTransferCount    int64           `json:"otherTransferCount"`
+	CurrentProcessAddress string          `json:"currentProcessAddress"`
+	NextProcess           AdjacentProcess `json:"nextProcess"`
+	PreviousProcess       AdjacentProcess `json:"previousProcess"`
 }
 
 type ProcessBasic struct {
@@ -55,10 +56,16 @@ type ProcessBasic struct {
 	ProcessID   int    `json:"processId"`
 }
 
+type AdjacentProcess struct {
+	EProcessAddress string `json:"eProcessAddress"`
+	ProcessName     string `json:"processName"`
+	ProcessID       int    `json:"processId"`
+}
+
 type IterateProcessesResponse struct {
-	Success      bool           `json:"success"`
-	ProcessCount int            `json:"processCount"`
-	Processes    []ProcessBasic `json:"processes"`
+	Success      bool          `json:"success"`
+	ProcessCount int           `json:"processCount"`
+	Processes    []ProcessInfo `json:"processes"`
 }
 
 type ProcessByPidResponse struct {
@@ -165,6 +172,7 @@ func (h *WebhookHandler) ProcessByPid(c *fiber.Ctx) error {
 		})
 	}
 
+	log.Info(responseBody)
 	var response ProcessByPidResponse
 	if err := json.Unmarshal(responseBody, &response); err != nil {
 		return c.JSON(fiber.Map{
