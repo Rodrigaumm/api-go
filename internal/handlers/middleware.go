@@ -37,27 +37,27 @@ func JWTMiddleware() fiber.Handler {
 		}
 
 		c.Locals("user_id", claims.UserID)
-		c.Locals("user_email", claims.Email)
+		c.Locals("user_name", claims.Name)
 
 		return c.Next()
 	}
 }
 
 // GetUserFromContext extrai informações do usuário do fiber context
-func GetUserFromContext(c *fiber.Ctx) (userID int64, email string, ok bool) {
+func GetUserFromContext(c *fiber.Ctx) (userID int64, name string, ok bool) {
 	userIDInterface := c.Locals("user_id")
-	emailInterface := c.Locals("user_email")
+	nameInterface := c.Locals("user_name")
 
-	if userIDInterface == nil || emailInterface == nil {
+	if userIDInterface == nil || nameInterface == nil {
 		return 0, "", false
 	}
 
 	userID, userIDOk := userIDInterface.(int64)
-	email, emailOk := emailInterface.(string)
+	name, nameOk := nameInterface.(string)
 
-	if !userIDOk || !emailOk {
+	if !userIDOk || !nameOk {
 		return 0, "", false
 	}
 
-	return userID, email, true
+	return userID, name, true
 }

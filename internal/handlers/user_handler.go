@@ -24,20 +24,17 @@ func NewUserHandler(dbpool *pgxpool.Pool) *UserHandler {
 
 type CreateUserRequest struct {
 	Name     string `json:"name" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 }
 
 type UpdateUserRequest struct {
 	Name     *string `json:"name,omitempty"`
-	Email    *string `json:"email,omitempty"`
 	Password *string `json:"password,omitempty"`
 }
 
 type UserResponse struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // hashPassword cria a hash SHA-512 da senha
@@ -50,9 +47,8 @@ func toUserResponse(user interface{}) UserResponse {
 	switch u := user.(type) {
 	case db.User:
 		return UserResponse{
-			ID:    u.ID,
-			Name:  u.Name,
-			Email: u.Email,
+			ID:   u.ID,
+			Name: u.Name,
 		}
 	default:
 		return UserResponse{}
@@ -118,7 +114,6 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	params := db.CreateUserParams{
 		Name:     req.Name,
-		Email:    req.Email,
 		Password: hashedPassword,
 	}
 
@@ -171,12 +166,6 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 		params.Name = *req.Name
 	} else {
 		params.Name = currentUser.Name
-	}
-
-	if req.Email != nil {
-		params.Email = *req.Email
-	} else {
-		params.Email = currentUser.Email
 	}
 
 	if req.Password != nil {

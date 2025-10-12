@@ -28,7 +28,7 @@ func NewAuthHandler(dbpool *pgxpool.Pool) *AuthHandler {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
+	Name     string `json:"name" validate:"required,name"`
 	Password string `json:"password" validate:"required"`
 }
 
@@ -39,7 +39,7 @@ type LoginResponse struct {
 
 type Claims struct {
 	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
+	Name   string `json:"name"`
 	jwt.RegisteredClaims
 }
 
@@ -51,7 +51,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.queries.GetUserByEmail(context.Background(), req.Email)
+	user, err := h.queries.GetUserByName(context.Background(), req.Name)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{
 			"error": "Invalid credentials",
@@ -65,7 +65,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := generateJWT(user.ID, user.Email)
+	token, err := generateJWT(user.ID, user.Name)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to generate token",
@@ -78,7 +78,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
-func generateJWT(userID int64, email string) (string, error) {
+func generateJWT(userID int64, name string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "your-secret-key"
@@ -86,7 +86,7 @@ func generateJWT(userID int64, email string) (string, error) {
 
 	claims := Claims{
 		UserID: userID,
-		Email:  email,
+		Name:   name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // 24 hours
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

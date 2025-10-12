@@ -1,35 +1,34 @@
 -- name: GetUsers :many
-SELECT id, name, email, password, created_at, updated_at FROM users
+SELECT id, name, password, created_at, updated_at FROM users
 ORDER BY id;
 
 -- name: GetUser :one
-SELECT id, name, email, password, created_at, updated_at FROM users
+SELECT id, name, password, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1;
 
 -- name: CreateUser :one
 INSERT INTO users (
-  name, email, password
+  name, password
 ) VALUES (
-  $1, $2, $3
+  $1, $2
 )
-RETURNING id, name, email, password, created_at, updated_at;
+RETURNING id, name, password, created_at, updated_at;
 
 -- name: UpdateUser :one
 UPDATE users
   set name = $2,
-  email = $3,
-  password = $4,
+  password = $3,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, email, password, created_at, updated_at;
+RETURNING id, name, password, created_at, updated_at;
 
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
 
--- name: GetUserByEmail :one
-SELECT id, name, email, password, created_at, updated_at FROM users
-WHERE email = $1 LIMIT 1;
+-- name: GetUserByName :one
+SELECT id, name, password, created_at, updated_at FROM users
+WHERE name = $1 LIMIT 1;
 
 -- Process Info Queries
 

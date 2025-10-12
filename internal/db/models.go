@@ -43,7 +43,6 @@ type ProcessInfo struct {
 type User struct {
 	ID        int64            `json:"id"`
 	Name      string           `json:"name"`
-	Email     string           `json:"email"`
 	Password  string           `json:"password"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`

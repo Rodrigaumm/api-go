@@ -18,7 +18,7 @@ type Querier interface {
 	GetProcessInfosByProcessId(ctx context.Context, arg GetProcessInfosByProcessIdParams) ([]ProcessInfo, error)
 	GetProcessInfosByUser(ctx context.Context, userID int64) ([]ProcessInfo, error)
 	GetUser(ctx context.Context, id int64) (User, error)
-	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByName(ctx context.Context, name string) (User, error)
 	GetUsers(ctx context.Context) ([]User, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
