@@ -11,53 +11,86 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createIterationProcess = `-- name: CreateIterationProcess :one
+const countUserProcesses = `-- name: CountUserProcesses :one
 
-INSERT INTO iteration_processes (
-    iteration_id, process_info_id
-) VALUES (
-    $1, $2
-)
-RETURNING id, iteration_id, process_info_id, created_at
+SELECT COUNT(*) FROM process_info WHERE user_id = $1
 `
 
-type CreateIterationProcessParams struct {
-	IterationID   int64 `json:"iteration_id"`
-	ProcessInfoID int64 `json:"process_info_id"`
+// ============================================
+// Statistics and Analytics
+// ============================================
+func (q *Queries) CountUserProcesses(ctx context.Context, userID pgtype.Int8) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserProcesses, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
-// ============================================================================
-// Iteration Processes (Link Table) Queries
-// ============================================================================
-func (q *Queries) CreateIterationProcess(ctx context.Context, arg CreateIterationProcessParams) (IterationProcess, error) {
-	row := q.db.QueryRow(ctx, createIterationProcess, arg.IterationID, arg.ProcessInfoID)
-	var i IterationProcess
-	err := row.Scan(
-		&i.ID,
-		&i.IterationID,
-		&i.ProcessInfoID,
-		&i.CreatedAt,
-	)
-	return i, err
+const countUserQueries = `-- name: CountUserQueries :one
+SELECT COUNT(*) FROM process_queries WHERE user_id = $1
+`
+
+func (q *Queries) CountUserQueries(ctx context.Context, userID pgtype.Int8) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserQueries, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserSnapshots = `-- name: CountUserSnapshots :one
+SELECT COUNT(*) FROM process_snapshots WHERE user_id = $1
+`
+
+func (q *Queries) CountUserSnapshots(ctx context.Context, userID pgtype.Int8) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserSnapshots, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const createProcessInfo = `-- name: CreateProcessInfo :one
 
 INSERT INTO process_info (
-    user_id, process_id, parent_process_id, process_name, thread_count, handle_count,
-    base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size,
-    virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count,
-    read_operation_count, write_operation_count, other_operation_count, read_transfer_count,
-    write_transfer_count, other_transfer_count, current_process_address,
-    next_process_eprocess_address, next_process_name, next_process_id,
-    previous_process_eprocess_address, previous_process_name, previous_process_id
+    snapshot_id,
+    user_id,
+    process_id,
+    parent_process_id,
+    process_name,
+    thread_count,
+    handle_count,
+    base_priority,
+    create_time,
+    user_time,
+    kernel_time,
+    working_set_size,
+    peak_working_set_size,
+    virtual_size,
+    peak_virtual_size,
+    pagefile_usage,
+    peak_pagefile_usage,
+    page_fault_count,
+    read_operation_count,
+    write_operation_count,
+    other_operation_count,
+    read_transfer_count,
+    write_transfer_count,
+    other_transfer_count,
+    current_process_address,
+    next_process_eprocess_address,
+    next_process_name,
+    next_process_id,
+    previous_process_eprocess_address,
+    previous_process_name,
+    previous_process_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
-)
-RETURNING id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+) RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at
 `
 
 type CreateProcessInfoParams struct {
+	SnapshotID                     int64       `json:"snapshot_id"`
 	UserID                         pgtype.Int8 `json:"user_id"`
 	ProcessID                      int32       `json:"process_id"`
 	ParentProcessID                int32       `json:"parent_process_id"`
@@ -90,11 +123,12 @@ type CreateProcessInfoParams struct {
 	PreviousProcessID              pgtype.Int4 `json:"previous_process_id"`
 }
 
-// ============================================================================
+// ============================================
 // Process Info Queries
-// ============================================================================
+// ============================================
 func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoParams) (ProcessInfo, error) {
 	row := q.db.QueryRow(ctx, createProcessInfo,
+		arg.SnapshotID,
 		arg.UserID,
 		arg.ProcessID,
 		arg.ParentProcessID,
@@ -129,6 +163,7 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 	var i ProcessInfo
 	err := row.Scan(
 		&i.ID,
+		&i.SnapshotID,
 		&i.UserID,
 		&i.ProcessID,
 		&i.ParentProcessID,
@@ -165,59 +200,21 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 	return i, err
 }
 
-const createProcessIterationHistory = `-- name: CreateProcessIterationHistory :one
+const createProcessQuery = `-- name: CreateProcessQuery :one
 
-INSERT INTO process_iteration_history (
-    user_id, webhook_url, process_count, success, error_message
-) VALUES (
-    $1, $2, $3, $4, $5
-)
-RETURNING id, user_id, webhook_url, process_count, success, error_message, created_at
+INSERT INTO process_queries (
+    snapshot_id,
+    user_id,
+    webhook_url,
+    requested_pid,
+    process_info_id,
+    success,
+    error_message
+) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, snapshot_id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at
 `
 
-type CreateProcessIterationHistoryParams struct {
-	UserID       pgtype.Int8 `json:"user_id"`
-	WebhookUrl   string      `json:"webhook_url"`
-	ProcessCount int32       `json:"process_count"`
-	Success      bool        `json:"success"`
-	ErrorMessage pgtype.Text `json:"error_message"`
-}
-
-// ============================================================================
-// Process Iteration History Queries
-// ============================================================================
-func (q *Queries) CreateProcessIterationHistory(ctx context.Context, arg CreateProcessIterationHistoryParams) (ProcessIterationHistory, error) {
-	row := q.db.QueryRow(ctx, createProcessIterationHistory,
-		arg.UserID,
-		arg.WebhookUrl,
-		arg.ProcessCount,
-		arg.Success,
-		arg.ErrorMessage,
-	)
-	var i ProcessIterationHistory
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.WebhookUrl,
-		&i.ProcessCount,
-		&i.Success,
-		&i.ErrorMessage,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const createProcessQueryHistory = `-- name: CreateProcessQueryHistory :one
-
-INSERT INTO process_query_history (
-    user_id, webhook_url, requested_pid, process_info_id, success, error_message
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-)
-RETURNING id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at
-`
-
-type CreateProcessQueryHistoryParams struct {
+type CreateProcessQueryParams struct {
+	SnapshotID    int64       `json:"snapshot_id"`
 	UserID        pgtype.Int8 `json:"user_id"`
 	WebhookUrl    string      `json:"webhook_url"`
 	RequestedPid  int32       `json:"requested_pid"`
@@ -226,11 +223,12 @@ type CreateProcessQueryHistoryParams struct {
 	ErrorMessage  pgtype.Text `json:"error_message"`
 }
 
-// ============================================================================
-// Process Query History Queries
-// ============================================================================
-func (q *Queries) CreateProcessQueryHistory(ctx context.Context, arg CreateProcessQueryHistoryParams) (ProcessQueryHistory, error) {
-	row := q.db.QueryRow(ctx, createProcessQueryHistory,
+// ============================================
+// Process Queries (Query by PID history)
+// ============================================
+func (q *Queries) CreateProcessQuery(ctx context.Context, arg CreateProcessQueryParams) (ProcessQuery, error) {
+	row := q.db.QueryRow(ctx, createProcessQuery,
+		arg.SnapshotID,
 		arg.UserID,
 		arg.WebhookUrl,
 		arg.RequestedPid,
@@ -238,9 +236,10 @@ func (q *Queries) CreateProcessQueryHistory(ctx context.Context, arg CreateProce
 		arg.Success,
 		arg.ErrorMessage,
 	)
-	var i ProcessQueryHistory
+	var i ProcessQuery
 	err := row.Scan(
 		&i.ID,
+		&i.SnapshotID,
 		&i.UserID,
 		&i.WebhookUrl,
 		&i.RequestedPid,
@@ -252,13 +251,56 @@ func (q *Queries) CreateProcessQueryHistory(ctx context.Context, arg CreateProce
 	return i, err
 }
 
+const createProcessSnapshot = `-- name: CreateProcessSnapshot :one
+
+INSERT INTO process_snapshots (
+    user_id,
+    webhook_url,
+    snapshot_type,
+    process_count,
+    success,
+    error_message
+) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, user_id, webhook_url, snapshot_type, process_count, success, error_message, created_at, updated_at
+`
+
+type CreateProcessSnapshotParams struct {
+	UserID       pgtype.Int8 `json:"user_id"`
+	WebhookUrl   string      `json:"webhook_url"`
+	SnapshotType string      `json:"snapshot_type"`
+	ProcessCount int32       `json:"process_count"`
+	Success      bool        `json:"success"`
+	ErrorMessage pgtype.Text `json:"error_message"`
+}
+
+// ============================================
+// Process Snapshots Queries
+// ============================================
+func (q *Queries) CreateProcessSnapshot(ctx context.Context, arg CreateProcessSnapshotParams) (ProcessSnapshot, error) {
+	row := q.db.QueryRow(ctx, createProcessSnapshot,
+		arg.UserID,
+		arg.WebhookUrl,
+		arg.SnapshotType,
+		arg.ProcessCount,
+		arg.Success,
+		arg.ErrorMessage,
+	)
+	var i ProcessSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WebhookUrl,
+		&i.SnapshotType,
+		&i.ProcessCount,
+		&i.Success,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (
-  name, password
-) VALUES (
-  $1, $2
-)
-RETURNING id, name, password, created_at, updated_at
+INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id, name, password, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -280,23 +322,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteProcessInfo = `-- name: DeleteProcessInfo :exec
-DELETE FROM process_info
-WHERE id = $1 AND user_id = $2
+DELETE FROM process_info WHERE id = $1
 `
 
-type DeleteProcessInfoParams struct {
-	ID     int64       `json:"id"`
-	UserID pgtype.Int8 `json:"user_id"`
+func (q *Queries) DeleteProcessInfo(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteProcessInfo, id)
+	return err
 }
 
-func (q *Queries) DeleteProcessInfo(ctx context.Context, arg DeleteProcessInfoParams) error {
-	_, err := q.db.Exec(ctx, deleteProcessInfo, arg.ID, arg.UserID)
+const deleteProcessSnapshot = `-- name: DeleteProcessSnapshot :exec
+DELETE FROM process_snapshots WHERE id = $1
+`
+
+func (q *Queries) DeleteProcessSnapshot(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteProcessSnapshot, id)
 	return err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users
-WHERE id = $1
+DELETE FROM users WHERE id = $1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
@@ -304,19 +348,159 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
-const getAllProcessInfos = `-- name: GetAllProcessInfos :many
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+const getMostQueriedProcesses = `-- name: GetMostQueriedProcesses :many
+SELECT 
+    requested_pid,
+    COUNT(*) as query_count
+FROM process_queries
+WHERE user_id = $1 OR user_id IS NULL
+GROUP BY requested_pid
+ORDER BY query_count DESC
+LIMIT $2
 `
 
-type GetAllProcessInfosParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+type GetMostQueriedProcessesParams struct {
+	UserID pgtype.Int8 `json:"user_id"`
+	Limit  int32       `json:"limit"`
 }
 
-func (q *Queries) GetAllProcessInfos(ctx context.Context, arg GetAllProcessInfosParams) ([]ProcessInfo, error) {
-	rows, err := q.db.Query(ctx, getAllProcessInfos, arg.Limit, arg.Offset)
+type GetMostQueriedProcessesRow struct {
+	RequestedPid int32 `json:"requested_pid"`
+	QueryCount   int64 `json:"query_count"`
+}
+
+func (q *Queries) GetMostQueriedProcesses(ctx context.Context, arg GetMostQueriedProcessesParams) ([]GetMostQueriedProcessesRow, error) {
+	rows, err := q.db.Query(ctx, getMostQueriedProcesses, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMostQueriedProcessesRow
+	for rows.Next() {
+		var i GetMostQueriedProcessesRow
+		if err := rows.Scan(&i.RequestedPid, &i.QueryCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProcessInfo = `-- name: GetProcessInfo :one
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, error) {
+	row := q.db.QueryRow(ctx, getProcessInfo, id)
+	var i ProcessInfo
+	err := row.Scan(
+		&i.ID,
+		&i.SnapshotID,
+		&i.UserID,
+		&i.ProcessID,
+		&i.ParentProcessID,
+		&i.ProcessName,
+		&i.ThreadCount,
+		&i.HandleCount,
+		&i.BasePriority,
+		&i.CreateTime,
+		&i.UserTime,
+		&i.KernelTime,
+		&i.WorkingSetSize,
+		&i.PeakWorkingSetSize,
+		&i.VirtualSize,
+		&i.PeakVirtualSize,
+		&i.PagefileUsage,
+		&i.PeakPagefileUsage,
+		&i.PageFaultCount,
+		&i.ReadOperationCount,
+		&i.WriteOperationCount,
+		&i.OtherOperationCount,
+		&i.ReadTransferCount,
+		&i.WriteTransferCount,
+		&i.OtherTransferCount,
+		&i.CurrentProcessAddress,
+		&i.NextProcessEprocessAddress,
+		&i.NextProcessName,
+		&i.NextProcessID,
+		&i.PreviousProcessEprocessAddress,
+		&i.PreviousProcessName,
+		&i.PreviousProcessID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProcessInfoBySnapshotAndPID = `-- name: GetProcessInfoBySnapshotAndPID :one
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+WHERE snapshot_id = $1 AND process_id = $2
+LIMIT 1
+`
+
+type GetProcessInfoBySnapshotAndPIDParams struct {
+	SnapshotID int64 `json:"snapshot_id"`
+	ProcessID  int32 `json:"process_id"`
+}
+
+func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetProcessInfoBySnapshotAndPIDParams) (ProcessInfo, error) {
+	row := q.db.QueryRow(ctx, getProcessInfoBySnapshotAndPID, arg.SnapshotID, arg.ProcessID)
+	var i ProcessInfo
+	err := row.Scan(
+		&i.ID,
+		&i.SnapshotID,
+		&i.UserID,
+		&i.ProcessID,
+		&i.ParentProcessID,
+		&i.ProcessName,
+		&i.ThreadCount,
+		&i.HandleCount,
+		&i.BasePriority,
+		&i.CreateTime,
+		&i.UserTime,
+		&i.KernelTime,
+		&i.WorkingSetSize,
+		&i.PeakWorkingSetSize,
+		&i.VirtualSize,
+		&i.PeakVirtualSize,
+		&i.PagefileUsage,
+		&i.PeakPagefileUsage,
+		&i.PageFaultCount,
+		&i.ReadOperationCount,
+		&i.WriteOperationCount,
+		&i.OtherOperationCount,
+		&i.ReadTransferCount,
+		&i.WriteTransferCount,
+		&i.OtherTransferCount,
+		&i.CurrentProcessAddress,
+		&i.NextProcessEprocessAddress,
+		&i.NextProcessName,
+		&i.NextProcessID,
+		&i.PreviousProcessEprocessAddress,
+		&i.PreviousProcessName,
+		&i.PreviousProcessID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProcessInfosByProcessID = `-- name: GetProcessInfosByProcessID :many
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+WHERE (user_id = $1 OR user_id IS NULL) AND process_id = $2
+ORDER BY created_at DESC
+`
+
+type GetProcessInfosByProcessIDParams struct {
+	UserID    pgtype.Int8 `json:"user_id"`
+	ProcessID int32       `json:"process_id"`
+}
+
+func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcessInfosByProcessIDParams) ([]ProcessInfo, error) {
+	rows, err := q.db.Query(ctx, getProcessInfosByProcessID, arg.UserID, arg.ProcessID)
 	if err != nil {
 		return nil, err
 	}
@@ -326,6 +510,7 @@ func (q *Queries) GetAllProcessInfos(ctx context.Context, arg GetAllProcessInfos
 		var i ProcessInfo
 		if err := rows.Scan(
 			&i.ID,
+			&i.SnapshotID,
 			&i.UserID,
 			&i.ProcessID,
 			&i.ParentProcessID,
@@ -369,272 +554,14 @@ func (q *Queries) GetAllProcessInfos(ctx context.Context, arg GetAllProcessInfos
 	return items, nil
 }
 
-const getAllProcessIterationHistory = `-- name: GetAllProcessIterationHistory :many
-SELECT id, user_id, webhook_url, process_count, success, error_message, created_at FROM process_iteration_history
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+const getProcessInfosBySnapshot = `-- name: GetProcessInfosBySnapshot :many
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+WHERE snapshot_id = $1
+ORDER BY process_id ASC
 `
 
-type GetAllProcessIterationHistoryParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetAllProcessIterationHistory(ctx context.Context, arg GetAllProcessIterationHistoryParams) ([]ProcessIterationHistory, error) {
-	rows, err := q.db.Query(ctx, getAllProcessIterationHistory, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessIterationHistory
-	for rows.Next() {
-		var i ProcessIterationHistory
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.WebhookUrl,
-			&i.ProcessCount,
-			&i.Success,
-			&i.ErrorMessage,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllProcessQueryHistory = `-- name: GetAllProcessQueryHistory :many
-SELECT id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_query_history
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
-`
-
-type GetAllProcessQueryHistoryParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetAllProcessQueryHistory(ctx context.Context, arg GetAllProcessQueryHistoryParams) ([]ProcessQueryHistory, error) {
-	rows, err := q.db.Query(ctx, getAllProcessQueryHistory, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessQueryHistory
-	for rows.Next() {
-		var i ProcessQueryHistory
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.WebhookUrl,
-			&i.RequestedPid,
-			&i.ProcessInfoID,
-			&i.Success,
-			&i.ErrorMessage,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getIterationsByProcessInfoID = `-- name: GetIterationsByProcessInfoID :many
-SELECT pih.id, pih.user_id, pih.webhook_url, pih.process_count, pih.success, pih.error_message, pih.created_at FROM process_iteration_history pih
-INNER JOIN iteration_processes ip ON pih.id = ip.iteration_id
-WHERE ip.process_info_id = $1
-ORDER BY pih.created_at DESC
-`
-
-func (q *Queries) GetIterationsByProcessInfoID(ctx context.Context, processInfoID int64) ([]ProcessIterationHistory, error) {
-	rows, err := q.db.Query(ctx, getIterationsByProcessInfoID, processInfoID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessIterationHistory
-	for rows.Next() {
-		var i ProcessIterationHistory
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.WebhookUrl,
-			&i.ProcessCount,
-			&i.Success,
-			&i.ErrorMessage,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getMostQueriedProcesses = `-- name: GetMostQueriedProcesses :many
-SELECT process_id, process_name, COUNT(*) as query_count
-FROM process_info
-WHERE user_id = $1
-GROUP BY process_id, process_name
-ORDER BY query_count DESC
-LIMIT $2
-`
-
-type GetMostQueriedProcessesParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-}
-
-type GetMostQueriedProcessesRow struct {
-	ProcessID   int32  `json:"process_id"`
-	ProcessName string `json:"process_name"`
-	QueryCount  int64  `json:"query_count"`
-}
-
-func (q *Queries) GetMostQueriedProcesses(ctx context.Context, arg GetMostQueriedProcessesParams) ([]GetMostQueriedProcessesRow, error) {
-	rows, err := q.db.Query(ctx, getMostQueriedProcesses, arg.UserID, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetMostQueriedProcessesRow
-	for rows.Next() {
-		var i GetMostQueriedProcessesRow
-		if err := rows.Scan(&i.ProcessID, &i.ProcessName, &i.QueryCount); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getProcessInfo = `-- name: GetProcessInfo :one
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-WHERE id = $1 AND user_id = $2
-LIMIT 1
-`
-
-type GetProcessInfoParams struct {
-	ID     int64       `json:"id"`
-	UserID pgtype.Int8 `json:"user_id"`
-}
-
-func (q *Queries) GetProcessInfo(ctx context.Context, arg GetProcessInfoParams) (ProcessInfo, error) {
-	row := q.db.QueryRow(ctx, getProcessInfo, arg.ID, arg.UserID)
-	var i ProcessInfo
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ProcessID,
-		&i.ParentProcessID,
-		&i.ProcessName,
-		&i.ThreadCount,
-		&i.HandleCount,
-		&i.BasePriority,
-		&i.CreateTime,
-		&i.UserTime,
-		&i.KernelTime,
-		&i.WorkingSetSize,
-		&i.PeakWorkingSetSize,
-		&i.VirtualSize,
-		&i.PeakVirtualSize,
-		&i.PagefileUsage,
-		&i.PeakPagefileUsage,
-		&i.PageFaultCount,
-		&i.ReadOperationCount,
-		&i.WriteOperationCount,
-		&i.OtherOperationCount,
-		&i.ReadTransferCount,
-		&i.WriteTransferCount,
-		&i.OtherTransferCount,
-		&i.CurrentProcessAddress,
-		&i.NextProcessEprocessAddress,
-		&i.NextProcessName,
-		&i.NextProcessID,
-		&i.PreviousProcessEprocessAddress,
-		&i.PreviousProcessName,
-		&i.PreviousProcessID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getProcessInfoByID = `-- name: GetProcessInfoByID :one
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-WHERE id = $1
-LIMIT 1
-`
-
-func (q *Queries) GetProcessInfoByID(ctx context.Context, id int64) (ProcessInfo, error) {
-	row := q.db.QueryRow(ctx, getProcessInfoByID, id)
-	var i ProcessInfo
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ProcessID,
-		&i.ParentProcessID,
-		&i.ProcessName,
-		&i.ThreadCount,
-		&i.HandleCount,
-		&i.BasePriority,
-		&i.CreateTime,
-		&i.UserTime,
-		&i.KernelTime,
-		&i.WorkingSetSize,
-		&i.PeakWorkingSetSize,
-		&i.VirtualSize,
-		&i.PeakVirtualSize,
-		&i.PagefileUsage,
-		&i.PeakPagefileUsage,
-		&i.PageFaultCount,
-		&i.ReadOperationCount,
-		&i.WriteOperationCount,
-		&i.OtherOperationCount,
-		&i.ReadTransferCount,
-		&i.WriteTransferCount,
-		&i.OtherTransferCount,
-		&i.CurrentProcessAddress,
-		&i.NextProcessEprocessAddress,
-		&i.NextProcessName,
-		&i.NextProcessID,
-		&i.PreviousProcessEprocessAddress,
-		&i.PreviousProcessName,
-		&i.PreviousProcessID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getProcessInfosByProcessID = `-- name: GetProcessInfosByProcessID :many
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-WHERE user_id = $1 AND process_id = $2
-ORDER BY created_at DESC
-`
-
-type GetProcessInfosByProcessIDParams struct {
-	UserID    pgtype.Int8 `json:"user_id"`
-	ProcessID int32       `json:"process_id"`
-}
-
-func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcessInfosByProcessIDParams) ([]ProcessInfo, error) {
-	rows, err := q.db.Query(ctx, getProcessInfosByProcessID, arg.UserID, arg.ProcessID)
+func (q *Queries) GetProcessInfosBySnapshot(ctx context.Context, snapshotID int64) ([]ProcessInfo, error) {
+	rows, err := q.db.Query(ctx, getProcessInfosBySnapshot, snapshotID)
 	if err != nil {
 		return nil, err
 	}
@@ -644,6 +571,7 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 		var i ProcessInfo
 		if err := rows.Scan(
 			&i.ID,
+			&i.SnapshotID,
 			&i.UserID,
 			&i.ProcessID,
 			&i.ParentProcessID,
@@ -688,8 +616,8 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 }
 
 const getProcessInfosByUser = `-- name: GetProcessInfosByUser :many
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-WHERE user_id = $1
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+WHERE user_id = $1 OR user_id IS NULL
 ORDER BY created_at DESC
 `
 
@@ -704,6 +632,7 @@ func (q *Queries) GetProcessInfosByUser(ctx context.Context, userID pgtype.Int8)
 		var i ProcessInfo
 		if err := rows.Scan(
 			&i.ID,
+			&i.SnapshotID,
 			&i.UserID,
 			&i.ProcessID,
 			&i.ParentProcessID,
@@ -747,114 +676,33 @@ func (q *Queries) GetProcessInfosByUser(ctx context.Context, userID pgtype.Int8)
 	return items, nil
 }
 
-const getProcessInfosByUserPaginated = `-- name: GetProcessInfosByUserPaginated :many
-SELECT id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info
-WHERE user_id = $1
+const getProcessQueriesByPID = `-- name: GetProcessQueriesByPID :many
+SELECT id, snapshot_id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_queries 
+WHERE (user_id = $1 OR user_id IS NULL) AND requested_pid = $2
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
 `
 
-type GetProcessInfosByUserPaginatedParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
+type GetProcessQueriesByPIDParams struct {
+	UserID       pgtype.Int8 `json:"user_id"`
+	RequestedPid int32       `json:"requested_pid"`
 }
 
-func (q *Queries) GetProcessInfosByUserPaginated(ctx context.Context, arg GetProcessInfosByUserPaginatedParams) ([]ProcessInfo, error) {
-	rows, err := q.db.Query(ctx, getProcessInfosByUserPaginated, arg.UserID, arg.Limit, arg.Offset)
+func (q *Queries) GetProcessQueriesByPID(ctx context.Context, arg GetProcessQueriesByPIDParams) ([]ProcessQuery, error) {
+	rows, err := q.db.Query(ctx, getProcessQueriesByPID, arg.UserID, arg.RequestedPid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProcessInfo
+	var items []ProcessQuery
 	for rows.Next() {
-		var i ProcessInfo
+		var i ProcessQuery
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
-			&i.ProcessID,
-			&i.ParentProcessID,
-			&i.ProcessName,
-			&i.ThreadCount,
-			&i.HandleCount,
-			&i.BasePriority,
-			&i.CreateTime,
-			&i.UserTime,
-			&i.KernelTime,
-			&i.WorkingSetSize,
-			&i.PeakWorkingSetSize,
-			&i.VirtualSize,
-			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
-			&i.ReadOperationCount,
-			&i.WriteOperationCount,
-			&i.OtherOperationCount,
-			&i.ReadTransferCount,
-			&i.WriteTransferCount,
-			&i.OtherTransferCount,
-			&i.CurrentProcessAddress,
-			&i.NextProcessEprocessAddress,
-			&i.NextProcessName,
-			&i.NextProcessID,
-			&i.PreviousProcessEprocessAddress,
-			&i.PreviousProcessName,
-			&i.PreviousProcessID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getProcessIterationHistory = `-- name: GetProcessIterationHistory :one
-SELECT id, user_id, webhook_url, process_count, success, error_message, created_at FROM process_iteration_history
-WHERE id = $1
-LIMIT 1
-`
-
-func (q *Queries) GetProcessIterationHistory(ctx context.Context, id int64) (ProcessIterationHistory, error) {
-	row := q.db.QueryRow(ctx, getProcessIterationHistory, id)
-	var i ProcessIterationHistory
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.WebhookUrl,
-		&i.ProcessCount,
-		&i.Success,
-		&i.ErrorMessage,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getProcessIterationHistoryByUser = `-- name: GetProcessIterationHistoryByUser :many
-SELECT id, user_id, webhook_url, process_count, success, error_message, created_at FROM process_iteration_history
-WHERE user_id = $1
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetProcessIterationHistoryByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessIterationHistory, error) {
-	rows, err := q.db.Query(ctx, getProcessIterationHistoryByUser, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessIterationHistory
-	for rows.Next() {
-		var i ProcessIterationHistory
-		if err := rows.Scan(
-			&i.ID,
+			&i.SnapshotID,
 			&i.UserID,
 			&i.WebhookUrl,
-			&i.ProcessCount,
+			&i.RequestedPid,
+			&i.ProcessInfoID,
 			&i.Success,
 			&i.ErrorMessage,
 			&i.CreatedAt,
@@ -869,33 +717,28 @@ func (q *Queries) GetProcessIterationHistoryByUser(ctx context.Context, userID p
 	return items, nil
 }
 
-const getProcessIterationHistoryByUserPaginated = `-- name: GetProcessIterationHistoryByUserPaginated :many
-SELECT id, user_id, webhook_url, process_count, success, error_message, created_at FROM process_iteration_history
-WHERE user_id = $1
+const getProcessQueriesBySnapshot = `-- name: GetProcessQueriesBySnapshot :many
+SELECT id, snapshot_id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_queries 
+WHERE snapshot_id = $1
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
 `
 
-type GetProcessIterationHistoryByUserPaginatedParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
-}
-
-func (q *Queries) GetProcessIterationHistoryByUserPaginated(ctx context.Context, arg GetProcessIterationHistoryByUserPaginatedParams) ([]ProcessIterationHistory, error) {
-	rows, err := q.db.Query(ctx, getProcessIterationHistoryByUserPaginated, arg.UserID, arg.Limit, arg.Offset)
+func (q *Queries) GetProcessQueriesBySnapshot(ctx context.Context, snapshotID int64) ([]ProcessQuery, error) {
+	rows, err := q.db.Query(ctx, getProcessQueriesBySnapshot, snapshotID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProcessIterationHistory
+	var items []ProcessQuery
 	for rows.Next() {
-		var i ProcessIterationHistory
+		var i ProcessQuery
 		if err := rows.Scan(
 			&i.ID,
+			&i.SnapshotID,
 			&i.UserID,
 			&i.WebhookUrl,
-			&i.ProcessCount,
+			&i.RequestedPid,
+			&i.ProcessInfoID,
 			&i.Success,
 			&i.ErrorMessage,
 			&i.CreatedAt,
@@ -910,17 +753,52 @@ func (q *Queries) GetProcessIterationHistoryByUserPaginated(ctx context.Context,
 	return items, nil
 }
 
-const getProcessQueryHistory = `-- name: GetProcessQueryHistory :one
-SELECT id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_query_history
-WHERE id = $1
-LIMIT 1
+const getProcessQueriesByUser = `-- name: GetProcessQueriesByUser :many
+SELECT id, snapshot_id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_queries 
+WHERE user_id = $1 OR user_id IS NULL
+ORDER BY created_at DESC
 `
 
-func (q *Queries) GetProcessQueryHistory(ctx context.Context, id int64) (ProcessQueryHistory, error) {
-	row := q.db.QueryRow(ctx, getProcessQueryHistory, id)
-	var i ProcessQueryHistory
+func (q *Queries) GetProcessQueriesByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessQuery, error) {
+	rows, err := q.db.Query(ctx, getProcessQueriesByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProcessQuery
+	for rows.Next() {
+		var i ProcessQuery
+		if err := rows.Scan(
+			&i.ID,
+			&i.SnapshotID,
+			&i.UserID,
+			&i.WebhookUrl,
+			&i.RequestedPid,
+			&i.ProcessInfoID,
+			&i.Success,
+			&i.ErrorMessage,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProcessQuery = `-- name: GetProcessQuery :one
+SELECT id, snapshot_id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_queries WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetProcessQuery(ctx context.Context, id int64) (ProcessQuery, error) {
+	row := q.db.QueryRow(ctx, getProcessQuery, id)
+	var i ProcessQuery
 	err := row.Scan(
 		&i.ID,
+		&i.SnapshotID,
 		&i.UserID,
 		&i.WebhookUrl,
 		&i.RequestedPid,
@@ -932,112 +810,56 @@ func (q *Queries) GetProcessQueryHistory(ctx context.Context, id int64) (Process
 	return i, err
 }
 
-const getProcessQueryHistoryByPID = `-- name: GetProcessQueryHistoryByPID :many
-SELECT pqh.id, pqh.user_id, pqh.webhook_url, pqh.requested_pid, pqh.process_info_id, pqh.success, pqh.error_message, pqh.created_at, pi.id, pi.user_id, pi.process_id, pi.parent_process_id, pi.process_name, pi.thread_count, pi.handle_count, pi.base_priority, pi.create_time, pi.user_time, pi.kernel_time, pi.working_set_size, pi.peak_working_set_size, pi.virtual_size, pi.peak_virtual_size, pi.pagefile_usage, pi.peak_pagefile_usage, pi.page_fault_count, pi.read_operation_count, pi.write_operation_count, pi.other_operation_count, pi.read_transfer_count, pi.write_transfer_count, pi.other_transfer_count, pi.current_process_address, pi.next_process_eprocess_address, pi.next_process_name, pi.next_process_id, pi.previous_process_eprocess_address, pi.previous_process_name, pi.previous_process_id, pi.created_at, pi.updated_at FROM process_query_history pqh
-LEFT JOIN process_info pi ON pqh.process_info_id = pi.id
-WHERE pqh.user_id = $1 AND pqh.requested_pid = $2
-ORDER BY pqh.created_at DESC
+const getProcessSnapshot = `-- name: GetProcessSnapshot :one
+SELECT id, user_id, webhook_url, snapshot_type, process_count, success, error_message, created_at, updated_at FROM process_snapshots WHERE id = $1 LIMIT 1
 `
 
-type GetProcessQueryHistoryByPIDParams struct {
+func (q *Queries) GetProcessSnapshot(ctx context.Context, id int64) (ProcessSnapshot, error) {
+	row := q.db.QueryRow(ctx, getProcessSnapshot, id)
+	var i ProcessSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WebhookUrl,
+		&i.SnapshotType,
+		&i.ProcessCount,
+		&i.Success,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getProcessSnapshotsByType = `-- name: GetProcessSnapshotsByType :many
+SELECT id, user_id, webhook_url, snapshot_type, process_count, success, error_message, created_at, updated_at FROM process_snapshots 
+WHERE (user_id = $1 OR user_id IS NULL) AND snapshot_type = $2
+ORDER BY created_at DESC
+`
+
+type GetProcessSnapshotsByTypeParams struct {
 	UserID       pgtype.Int8 `json:"user_id"`
-	RequestedPid int32       `json:"requested_pid"`
+	SnapshotType string      `json:"snapshot_type"`
 }
 
-type GetProcessQueryHistoryByPIDRow struct {
-	ID                             int64            `json:"id"`
-	UserID                         pgtype.Int8      `json:"user_id"`
-	WebhookUrl                     string           `json:"webhook_url"`
-	RequestedPid                   int32            `json:"requested_pid"`
-	ProcessInfoID                  pgtype.Int8      `json:"process_info_id"`
-	Success                        bool             `json:"success"`
-	ErrorMessage                   pgtype.Text      `json:"error_message"`
-	CreatedAt                      pgtype.Timestamp `json:"created_at"`
-	ID_2                           pgtype.Int8      `json:"id_2"`
-	UserID_2                       pgtype.Int8      `json:"user_id_2"`
-	ProcessID                      pgtype.Int4      `json:"process_id"`
-	ParentProcessID                pgtype.Int4      `json:"parent_process_id"`
-	ProcessName                    pgtype.Text      `json:"process_name"`
-	ThreadCount                    pgtype.Int4      `json:"thread_count"`
-	HandleCount                    pgtype.Int4      `json:"handle_count"`
-	BasePriority                   pgtype.Int4      `json:"base_priority"`
-	CreateTime                     pgtype.Text      `json:"create_time"`
-	UserTime                       pgtype.Text      `json:"user_time"`
-	KernelTime                     pgtype.Text      `json:"kernel_time"`
-	WorkingSetSize                 pgtype.Text      `json:"working_set_size"`
-	PeakWorkingSetSize             pgtype.Text      `json:"peak_working_set_size"`
-	VirtualSize                    pgtype.Text      `json:"virtual_size"`
-	PeakVirtualSize                pgtype.Text      `json:"peak_virtual_size"`
-	PagefileUsage                  pgtype.Text      `json:"pagefile_usage"`
-	PeakPagefileUsage              pgtype.Text      `json:"peak_pagefile_usage"`
-	PageFaultCount                 pgtype.Int4      `json:"page_fault_count"`
-	ReadOperationCount             pgtype.Int8      `json:"read_operation_count"`
-	WriteOperationCount            pgtype.Int8      `json:"write_operation_count"`
-	OtherOperationCount            pgtype.Int8      `json:"other_operation_count"`
-	ReadTransferCount              pgtype.Int8      `json:"read_transfer_count"`
-	WriteTransferCount             pgtype.Int8      `json:"write_transfer_count"`
-	OtherTransferCount             pgtype.Int8      `json:"other_transfer_count"`
-	CurrentProcessAddress          pgtype.Text      `json:"current_process_address"`
-	NextProcessEprocessAddress     pgtype.Text      `json:"next_process_eprocess_address"`
-	NextProcessName                pgtype.Text      `json:"next_process_name"`
-	NextProcessID                  pgtype.Int4      `json:"next_process_id"`
-	PreviousProcessEprocessAddress pgtype.Text      `json:"previous_process_eprocess_address"`
-	PreviousProcessName            pgtype.Text      `json:"previous_process_name"`
-	PreviousProcessID              pgtype.Int4      `json:"previous_process_id"`
-	CreatedAt_2                    pgtype.Timestamp `json:"created_at_2"`
-	UpdatedAt                      pgtype.Timestamp `json:"updated_at"`
-}
-
-func (q *Queries) GetProcessQueryHistoryByPID(ctx context.Context, arg GetProcessQueryHistoryByPIDParams) ([]GetProcessQueryHistoryByPIDRow, error) {
-	rows, err := q.db.Query(ctx, getProcessQueryHistoryByPID, arg.UserID, arg.RequestedPid)
+func (q *Queries) GetProcessSnapshotsByType(ctx context.Context, arg GetProcessSnapshotsByTypeParams) ([]ProcessSnapshot, error) {
+	rows, err := q.db.Query(ctx, getProcessSnapshotsByType, arg.UserID, arg.SnapshotType)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetProcessQueryHistoryByPIDRow
+	var items []ProcessSnapshot
 	for rows.Next() {
-		var i GetProcessQueryHistoryByPIDRow
+		var i ProcessSnapshot
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.WebhookUrl,
-			&i.RequestedPid,
-			&i.ProcessInfoID,
+			&i.SnapshotType,
+			&i.ProcessCount,
 			&i.Success,
 			&i.ErrorMessage,
 			&i.CreatedAt,
-			&i.ID_2,
-			&i.UserID_2,
-			&i.ProcessID,
-			&i.ParentProcessID,
-			&i.ProcessName,
-			&i.ThreadCount,
-			&i.HandleCount,
-			&i.BasePriority,
-			&i.CreateTime,
-			&i.UserTime,
-			&i.KernelTime,
-			&i.WorkingSetSize,
-			&i.PeakWorkingSetSize,
-			&i.VirtualSize,
-			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
-			&i.ReadOperationCount,
-			&i.WriteOperationCount,
-			&i.OtherOperationCount,
-			&i.ReadTransferCount,
-			&i.WriteTransferCount,
-			&i.OtherTransferCount,
-			&i.CurrentProcessAddress,
-			&i.NextProcessEprocessAddress,
-			&i.NextProcessName,
-			&i.NextProcessID,
-			&i.PreviousProcessEprocessAddress,
-			&i.PreviousProcessName,
-			&i.PreviousProcessID,
-			&i.CreatedAt_2,
 			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -1050,131 +872,29 @@ func (q *Queries) GetProcessQueryHistoryByPID(ctx context.Context, arg GetProces
 	return items, nil
 }
 
-const getProcessQueryHistoryByUser = `-- name: GetProcessQueryHistoryByUser :many
-SELECT id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_query_history
-WHERE user_id = $1
+const getProcessSnapshotsByUser = `-- name: GetProcessSnapshotsByUser :many
+SELECT id, user_id, webhook_url, snapshot_type, process_count, success, error_message, created_at, updated_at FROM process_snapshots 
+WHERE user_id = $1 OR user_id IS NULL
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetProcessQueryHistoryByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessQueryHistory, error) {
-	rows, err := q.db.Query(ctx, getProcessQueryHistoryByUser, userID)
+func (q *Queries) GetProcessSnapshotsByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessSnapshot, error) {
+	rows, err := q.db.Query(ctx, getProcessSnapshotsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProcessQueryHistory
+	var items []ProcessSnapshot
 	for rows.Next() {
-		var i ProcessQueryHistory
+		var i ProcessSnapshot
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.WebhookUrl,
-			&i.RequestedPid,
-			&i.ProcessInfoID,
+			&i.SnapshotType,
+			&i.ProcessCount,
 			&i.Success,
 			&i.ErrorMessage,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getProcessQueryHistoryByUserPaginated = `-- name: GetProcessQueryHistoryByUserPaginated :many
-SELECT id, user_id, webhook_url, requested_pid, process_info_id, success, error_message, created_at FROM process_query_history
-WHERE user_id = $1
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type GetProcessQueryHistoryByUserPaginatedParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
-}
-
-func (q *Queries) GetProcessQueryHistoryByUserPaginated(ctx context.Context, arg GetProcessQueryHistoryByUserPaginatedParams) ([]ProcessQueryHistory, error) {
-	rows, err := q.db.Query(ctx, getProcessQueryHistoryByUserPaginated, arg.UserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessQueryHistory
-	for rows.Next() {
-		var i ProcessQueryHistory
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.WebhookUrl,
-			&i.RequestedPid,
-			&i.ProcessInfoID,
-			&i.Success,
-			&i.ErrorMessage,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getProcessesByIterationID = `-- name: GetProcessesByIterationID :many
-SELECT pi.id, pi.user_id, pi.process_id, pi.parent_process_id, pi.process_name, pi.thread_count, pi.handle_count, pi.base_priority, pi.create_time, pi.user_time, pi.kernel_time, pi.working_set_size, pi.peak_working_set_size, pi.virtual_size, pi.peak_virtual_size, pi.pagefile_usage, pi.peak_pagefile_usage, pi.page_fault_count, pi.read_operation_count, pi.write_operation_count, pi.other_operation_count, pi.read_transfer_count, pi.write_transfer_count, pi.other_transfer_count, pi.current_process_address, pi.next_process_eprocess_address, pi.next_process_name, pi.next_process_id, pi.previous_process_eprocess_address, pi.previous_process_name, pi.previous_process_id, pi.created_at, pi.updated_at FROM process_info pi
-INNER JOIN iteration_processes ip ON pi.id = ip.process_info_id
-WHERE ip.iteration_id = $1
-ORDER BY pi.process_id
-`
-
-func (q *Queries) GetProcessesByIterationID(ctx context.Context, iterationID int64) ([]ProcessInfo, error) {
-	rows, err := q.db.Query(ctx, getProcessesByIterationID, iterationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ProcessInfo
-	for rows.Next() {
-		var i ProcessInfo
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.ProcessID,
-			&i.ParentProcessID,
-			&i.ProcessName,
-			&i.ThreadCount,
-			&i.HandleCount,
-			&i.BasePriority,
-			&i.CreateTime,
-			&i.UserTime,
-			&i.KernelTime,
-			&i.WorkingSetSize,
-			&i.PeakWorkingSetSize,
-			&i.VirtualSize,
-			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
-			&i.ReadOperationCount,
-			&i.WriteOperationCount,
-			&i.OtherOperationCount,
-			&i.ReadTransferCount,
-			&i.WriteTransferCount,
-			&i.OtherTransferCount,
-			&i.CurrentProcessAddress,
-			&i.NextProcessEprocessAddress,
-			&i.NextProcessName,
-			&i.NextProcessID,
-			&i.PreviousProcessEprocessAddress,
-			&i.PreviousProcessName,
-			&i.PreviousProcessID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1186,11 +906,32 @@ func (q *Queries) GetProcessesByIterationID(ctx context.Context, iterationID int
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSnapshotStatistics = `-- name: GetSnapshotStatistics :one
+SELECT 
+    COUNT(DISTINCT snapshot_id) as total_snapshots,
+    COUNT(*) as total_processes,
+    AVG(process_count) as avg_processes_per_snapshot
+FROM process_info
+WHERE user_id = $1 OR user_id IS NULL
+`
+
+type GetSnapshotStatisticsRow struct {
+	TotalSnapshots          int64   `json:"total_snapshots"`
+	TotalProcesses          int64   `json:"total_processes"`
+	AvgProcessesPerSnapshot float64 `json:"avg_processes_per_snapshot"`
+}
+
+func (q *Queries) GetSnapshotStatistics(ctx context.Context, userID pgtype.Int8) (GetSnapshotStatisticsRow, error) {
+	row := q.db.QueryRow(ctx, getSnapshotStatistics, userID)
+	var i GetSnapshotStatisticsRow
+	err := row.Scan(&i.TotalSnapshots, &i.TotalProcesses, &i.AvgProcessesPerSnapshot)
+	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, name, password, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
+SELECT id, name, password, created_at, updated_at FROM users WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -1207,8 +948,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByName = `-- name: GetUserByName :one
-SELECT id, name, password, created_at, updated_at FROM users
-WHERE name = $1 LIMIT 1
+SELECT id, name, password, created_at, updated_at FROM users WHERE name = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByName(ctx context.Context, name string) (User, error) {
@@ -1224,49 +964,8 @@ func (q *Queries) GetUserByName(ctx context.Context, name string) (User, error) 
 	return i, err
 }
 
-const getUserIterationCount = `-- name: GetUserIterationCount :one
-SELECT COUNT(*) FROM process_iteration_history
-WHERE user_id = $1
-`
-
-func (q *Queries) GetUserIterationCount(ctx context.Context, userID pgtype.Int8) (int64, error) {
-	row := q.db.QueryRow(ctx, getUserIterationCount, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const getUserProcessCount = `-- name: GetUserProcessCount :one
-
-SELECT COUNT(*) FROM process_info
-WHERE user_id = $1
-`
-
-// ============================================================================
-// Statistics and Analytics Queries
-// ============================================================================
-func (q *Queries) GetUserProcessCount(ctx context.Context, userID pgtype.Int8) (int64, error) {
-	row := q.db.QueryRow(ctx, getUserProcessCount, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const getUserQueryCount = `-- name: GetUserQueryCount :one
-SELECT COUNT(*) FROM process_query_history
-WHERE user_id = $1
-`
-
-func (q *Queries) GetUserQueryCount(ctx context.Context, userID pgtype.Int8) (int64, error) {
-	row := q.db.QueryRow(ctx, getUserQueryCount, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const getUsers = `-- name: GetUsers :many
-SELECT id, name, password, created_at, updated_at FROM users
-ORDER BY id
+SELECT id, name, password, created_at, updated_at FROM users ORDER BY created_at DESC
 `
 
 func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
@@ -1295,23 +994,34 @@ func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const updateUser = `-- name: UpdateUser :one
-UPDATE users
-  set name = $2,
-  password = $3,
-  updated_at = NOW()
+const updateProcessSnapshotCount = `-- name: UpdateProcessSnapshotCount :exec
+UPDATE process_snapshots 
+SET process_count = $2, updated_at = NOW() 
 WHERE id = $1
-RETURNING id, name, password, created_at, updated_at
+`
+
+type UpdateProcessSnapshotCountParams struct {
+	ID           int64 `json:"id"`
+	ProcessCount int32 `json:"process_count"`
+}
+
+func (q *Queries) UpdateProcessSnapshotCount(ctx context.Context, arg UpdateProcessSnapshotCountParams) error {
+	_, err := q.db.Exec(ctx, updateProcessSnapshotCount, arg.ID, arg.ProcessCount)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users SET name = $1, password = $2, updated_at = NOW() WHERE id = $3 RETURNING id, name, password, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	ID       int64  `json:"id"`
 	Name     string `json:"name"`
 	Password string `json:"password"`
+	ID       int64  `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Name, arg.Password)
+	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.Password, arg.ID)
 	var i User
 	err := row.Scan(
 		&i.ID,

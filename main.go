@@ -53,29 +53,24 @@ func main() {
 }
 
 func setupRoutes(app *fiber.App, dbpool *pgxpool.Pool) {
+	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
-			"message": "API está funcionando!",
+			"message": "API is running",
 		})
 	})
 
+	// API v1
 	api := app.Group("/api/v1")
 
-	api.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Bem-vindo à API!",
-		})
-	})
-
-	userHandler := handlers.NewUserHandler(dbpool)
+	// Auth routes (no JWT required)
 	authHandler := handlers.NewAuthHandler(dbpool)
-	processHandler := handlers.NewProcessHandler(dbpool)
-	webhookHandler := handlers.NewWebhookHandler(dbpool)
-
 	auth := api.Group("/auth")
 	auth.Post("/login", authHandler.Login)
 
+	// User routes (no JWT required for now)
+	userHandler := handlers.NewUserHandler(dbpool)
 	users := api.Group("/users")
 	users.Get("/", userHandler.GetUsers)
 	users.Get("/:id", userHandler.GetUser)
@@ -83,15 +78,32 @@ func setupRoutes(app *fiber.App, dbpool *pgxpool.Pool) {
 	users.Put("/:id", userHandler.UpdateUser)
 	users.Delete("/:id", userHandler.DeleteUser)
 
+	// Process routes (JWT required)
+	processHandler := handlers.NewProcessHandler(dbpool)
 	processes := api.Group("/processes")
 	processes.Use(handlers.JWTMiddleware())
-	processes.Post("/", processHandler.CreateProcessInfo)
+
+	// Snapshot routes
+	processes.Get("/snapshots", processHandler.GetSnapshots)
+	processes.Get("/snapshots/type/:type", processHandler.GetSnapshotsByType)
+	processes.Get("/snapshots/:id", processHandler.GetSnapshot)
+	processes.Get("/snapshots/:id/processes", processHandler.GetSnapshotProcesses)
+	processes.Get("/snapshots/:id/queries", processHandler.GetSnapshotQueries)
+	processes.Delete("/snapshots/:id", processHandler.DeleteSnapshot)
+
+	// Process info routes
 	processes.Get("/", processHandler.GetProcessInfos)
 	processes.Get("/:id", processHandler.GetProcessInfo)
-	processes.Get("/process/:processId", processHandler.GetProcessInfosByProcessID)
+	processes.Get("/pid/:pid", processHandler.GetProcessInfosByProcessID)
 	processes.Delete("/:id", processHandler.DeleteProcessInfo)
 
+	// Query history and statistics
+	processes.Get("/queries/history", processHandler.GetQueryHistory)
+	processes.Get("/statistics", processHandler.GetStatistics)
+
+	// Webhook routes (no JWT required, but can use JWT if provided)
+	webhookHandler := handlers.NewWebhookHandler(dbpool)
 	webhook := api.Group("/webhook")
-	webhook.Get("/iterate-processes", webhookHandler.IterateProcesses)
+	webhook.Post("/iterate-processes", webhookHandler.IterateProcesses)
 	webhook.Post("/process-by-pid", webhookHandler.ProcessByPid)
 }

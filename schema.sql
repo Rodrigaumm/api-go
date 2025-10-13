@@ -7,9 +7,24 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Table to represent a "snapshot" or "session" of process capture
+-- Each call to iterate-processes creates a new snapshot
+CREATE TABLE process_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE, -- NULL if no JWT token
+    webhook_url TEXT NOT NULL,
+    snapshot_type VARCHAR(50) NOT NULL, -- 'iteration' or 'query'
+    process_count INTEGER NOT NULL DEFAULT 0,
+    success BOOLEAN NOT NULL DEFAULT true,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Schema for process information based on webhook_handler.go ProcessInfo struct
 CREATE TABLE process_info (
     id BIGSERIAL PRIMARY KEY,
+    snapshot_id BIGINT NOT NULL REFERENCES process_snapshots(id) ON DELETE CASCADE,
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE, -- NULL if no JWT token
     
     -- Basic process information
@@ -60,33 +75,14 @@ CREATE TABLE process_info (
     updated_at TIMESTAMP DEFAULT NOW(),
     
     -- Index for faster queries
-    CONSTRAINT unique_process_snapshot UNIQUE (process_id, current_process_address, created_at)
+    CONSTRAINT unique_process_in_snapshot UNIQUE (snapshot_id, process_id, current_process_address)
 );
 
--- Table to track iterate-processes history
-CREATE TABLE process_iteration_history (
+-- Table to track individual process queries by PID
+-- Each query can either create a new snapshot or add to an existing one
+CREATE TABLE process_queries (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE, -- NULL if no JWT token
-    webhook_url TEXT NOT NULL,
-    process_count INTEGER NOT NULL,
-    success BOOLEAN NOT NULL DEFAULT true,
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Table to link process_info to iteration history (many-to-many)
-CREATE TABLE iteration_processes (
-    id BIGSERIAL PRIMARY KEY,
-    iteration_id BIGINT NOT NULL REFERENCES process_iteration_history(id) ON DELETE CASCADE,
-    process_info_id BIGINT NOT NULL REFERENCES process_info(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    
-    CONSTRAINT unique_iteration_process UNIQUE (iteration_id, process_info_id)
-);
-
--- Table to track individual process queries (processByPid)
-CREATE TABLE process_query_history (
-    id BIGSERIAL PRIMARY KEY,
+    snapshot_id BIGINT NOT NULL REFERENCES process_snapshots(id) ON DELETE CASCADE,
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE, -- NULL if no JWT token
     webhook_url TEXT NOT NULL,
     requested_pid INTEGER NOT NULL,
@@ -97,11 +93,16 @@ CREATE TABLE process_query_history (
 );
 
 -- Indexes for better performance
+CREATE INDEX idx_process_snapshots_user_id ON process_snapshots(user_id);
+CREATE INDEX idx_process_snapshots_created_at ON process_snapshots(created_at DESC);
+CREATE INDEX idx_process_snapshots_type ON process_snapshots(snapshot_type);
+
+CREATE INDEX idx_process_info_snapshot_id ON process_info(snapshot_id);
 CREATE INDEX idx_process_info_user_id ON process_info(user_id);
 CREATE INDEX idx_process_info_process_id ON process_info(process_id);
 CREATE INDEX idx_process_info_created_at ON process_info(created_at DESC);
-CREATE INDEX idx_process_iteration_history_user_id ON process_iteration_history(user_id);
-CREATE INDEX idx_process_iteration_history_created_at ON process_iteration_history(created_at DESC);
-CREATE INDEX idx_process_query_history_user_id ON process_query_history(user_id);
-CREATE INDEX idx_process_query_history_created_at ON process_query_history(created_at DESC);
-CREATE INDEX idx_iteration_processes_iteration_id ON iteration_processes(iteration_id);
+
+CREATE INDEX idx_process_queries_snapshot_id ON process_queries(snapshot_id);
+CREATE INDEX idx_process_queries_user_id ON process_queries(user_id);
+CREATE INDEX idx_process_queries_created_at ON process_queries(created_at DESC);
+CREATE INDEX idx_process_queries_requested_pid ON process_queries(requested_pid);

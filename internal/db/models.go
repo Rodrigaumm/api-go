@@ -8,15 +8,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type IterationProcess struct {
-	ID            int64            `json:"id"`
-	IterationID   int64            `json:"iteration_id"`
-	ProcessInfoID int64            `json:"process_info_id"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-}
-
 type ProcessInfo struct {
 	ID                             int64            `json:"id"`
+	SnapshotID                     int64            `json:"snapshot_id"`
 	UserID                         pgtype.Int8      `json:"user_id"`
 	ProcessID                      int32            `json:"process_id"`
 	ParentProcessID                int32            `json:"parent_process_id"`
@@ -51,18 +45,9 @@ type ProcessInfo struct {
 	UpdatedAt                      pgtype.Timestamp `json:"updated_at"`
 }
 
-type ProcessIterationHistory struct {
-	ID           int64            `json:"id"`
-	UserID       pgtype.Int8      `json:"user_id"`
-	WebhookUrl   string           `json:"webhook_url"`
-	ProcessCount int32            `json:"process_count"`
-	Success      bool             `json:"success"`
-	ErrorMessage pgtype.Text      `json:"error_message"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-}
-
-type ProcessQueryHistory struct {
+type ProcessQuery struct {
 	ID            int64            `json:"id"`
+	SnapshotID    int64            `json:"snapshot_id"`
 	UserID        pgtype.Int8      `json:"user_id"`
 	WebhookUrl    string           `json:"webhook_url"`
 	RequestedPid  int32            `json:"requested_pid"`
@@ -70,6 +55,18 @@ type ProcessQueryHistory struct {
 	Success       bool             `json:"success"`
 	ErrorMessage  pgtype.Text      `json:"error_message"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
+}
+
+type ProcessSnapshot struct {
+	ID           int64            `json:"id"`
+	UserID       pgtype.Int8      `json:"user_id"`
+	WebhookUrl   string           `json:"webhook_url"`
+	SnapshotType string           `json:"snapshot_type"`
+	ProcessCount int32            `json:"process_count"`
+	Success      bool             `json:"success"`
+	ErrorMessage pgtype.Text      `json:"error_message"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 }
 
 type User struct {

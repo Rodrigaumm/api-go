@@ -12,7 +12,6 @@ import (
 	"go-api/internal/db"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,127 +27,133 @@ func NewWebhookHandler(dbpool *pgxpool.Pool) *WebhookHandler {
 }
 
 type ProcessByPidRequest struct {
-	PID int `json:"pid"`
+	Pid int32 `json:"pid"`
 }
 
 type ProcessInfo struct {
-	ProcessID             int             `json:"processId"`
-	ParentProcessID       int             `json:"parentProcessId"`
-	ProcessName           string          `json:"processName"`
-	ThreadCount           int             `json:"threadCount"`
-	HandleCount           int             `json:"handleCount"`
-	BasePriority          int             `json:"basePriority"`
-	CreateTime            string          `json:"createTime"`
-	UserTime              string          `json:"userTime"`
-	KernelTime            string          `json:"kernelTime"`
-	WorkingSetSize        string          `json:"workingSetSize"`
-	PeakWorkingSetSize    string          `json:"peakWorkingSetSize"`
-	VirtualSize           string          `json:"virtualSize"`
-	PeakVirtualSize       string          `json:"peakVirtualSize"`
-	PagefileUsage         string          `json:"pagefileUsage"`
-	PeakPagefileUsage     string          `json:"peakPagefileUsage"`
-	PageFaultCount        int             `json:"pageFaultCount"`
-	ReadOperationCount    int64           `json:"readOperationCount"`
-	WriteOperationCount   int64           `json:"writeOperationCount"`
-	OtherOperationCount   int64           `json:"otherOperationCount"`
-	ReadTransferCount     int64           `json:"readTransferCount"`
-	WriteTransferCount    int64           `json:"writeTransferCount"`
-	OtherTransferCount    int64           `json:"otherTransferCount"`
-	CurrentProcessAddress string          `json:"currentProcessAddress"`
-	NextProcess           AdjacentProcess `json:"nextProcess"`
-	PreviousProcess       AdjacentProcess `json:"previousProcess"`
+	ProcessID                      int32   `json:"ProcessID"`
+	ParentProcessID                int32   `json:"ParentProcessID"`
+	ProcessName                    string  `json:"ProcessName"`
+	ThreadCount                    int32   `json:"ThreadCount"`
+	HandleCount                    int32   `json:"HandleCount"`
+	BasePriority                   int32   `json:"BasePriority"`
+	CreateTime                     string  `json:"CreateTime"`
+	UserTime                       string  `json:"UserTime"`
+	KernelTime                     string  `json:"KernelTime"`
+	WorkingSetSize                 string  `json:"WorkingSetSize"`
+	PeakWorkingSetSize             string  `json:"PeakWorkingSetSize"`
+	VirtualSize                    string  `json:"VirtualSize"`
+	PeakVirtualSize                string  `json:"PeakVirtualSize"`
+	PagefileUsage                  string  `json:"PagefileUsage"`
+	PeakPagefileUsage              string  `json:"PeakPagefileUsage"`
+	PageFaultCount                 int32   `json:"PageFaultCount"`
+	ReadOperationCount             int64   `json:"ReadOperationCount"`
+	WriteOperationCount            int64   `json:"WriteOperationCount"`
+	OtherOperationCount            int64   `json:"OtherOperationCount"`
+	ReadTransferCount              int64   `json:"ReadTransferCount"`
+	WriteTransferCount             int64   `json:"WriteTransferCount"`
+	OtherTransferCount             int64   `json:"OtherTransferCount"`
+	CurrentProcessAddress          string  `json:"CurrentProcessAddress"`
+	NextProcessEProcessAddress     *string `json:"NextProcessEProcessAddress,omitempty"`
+	NextProcessName                *string `json:"NextProcessName,omitempty"`
+	NextProcessID                  *int32  `json:"NextProcessID,omitempty"`
+	PreviousProcessEProcessAddress *string `json:"PreviousProcessEProcessAddress,omitempty"`
+	PreviousProcessName            *string `json:"PreviousProcessName,omitempty"`
+	PreviousProcessID              *int32  `json:"PreviousProcessID,omitempty"`
 }
 
 type AdjacentProcess struct {
-	EProcessAddress string `json:"eProcessAddress"`
-	ProcessName     string `json:"processName"`
-	ProcessID       int    `json:"processId"`
+	EProcessAddress string `json:"EProcessAddress"`
+	ProcessName     string `json:"ProcessName"`
+	ProcessID       int32  `json:"ProcessID"`
 }
 
 type IterateProcessesResponse struct {
-	Success      bool          `json:"success"`
-	ProcessCount int           `json:"processCount"`
-	Processes    []ProcessInfo `json:"processes"`
+	Processes []ProcessInfo `json:"processes"`
 }
 
 type ProcessByPidResponse struct {
-	Success     bool        `json:"success"`
-	ProcessInfo ProcessInfo `json:"processInfo"`
-	Error       string      `json:"error,omitempty"`
+	Process ProcessInfo `json:"process"`
 }
 
 func (h *WebhookHandler) makeHTTPRequest(url string, method string, body interface{}) ([]byte, error) {
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
 	var reqBody io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("erro ao serializar body: %v", err)
+			return nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		reqBody = bytes.NewBuffer(jsonBody)
 	}
 
 	req, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao criar requisição: %v", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao fazer requisição: %v", err)
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler resposta: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("requisição falhou com status %d: %s", resp.StatusCode, string(responseBody))
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("webhook returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	return responseBody, nil
+	return respBody, nil
 }
 
-// persistProcessInfo persists a single process info to the database
-func (h *WebhookHandler) persistProcessInfo(ctx context.Context, userID *int64, processInfo ProcessInfo) (int64, error) {
+func (h *WebhookHandler) persistProcessInfo(ctx context.Context, snapshotID int64, userID *int64, processInfo ProcessInfo) (int64, error) {
 	var userIDParam pgtype.Int8
 	if userID != nil {
 		userIDParam = pgtype.Int8{Int64: *userID, Valid: true}
-	} else {
-		userIDParam = pgtype.Int8{Valid: false}
 	}
 
-	// Helper function to convert string to pgtype.Text
-	toText := func(s string) pgtype.Text {
-		if s == "" {
-			return pgtype.Text{Valid: false}
-		}
-		return pgtype.Text{String: s, Valid: true}
+	var nextProcessEProcessAddress, nextProcessName pgtype.Text
+	var nextProcessID pgtype.Int4
+	if processInfo.NextProcessEProcessAddress != nil {
+		nextProcessEProcessAddress = pgtype.Text{String: *processInfo.NextProcessEProcessAddress, Valid: true}
+	}
+	if processInfo.NextProcessName != nil {
+		nextProcessName = pgtype.Text{String: *processInfo.NextProcessName, Valid: true}
+	}
+	if processInfo.NextProcessID != nil {
+		nextProcessID = pgtype.Int4{Int32: *processInfo.NextProcessID, Valid: true}
 	}
 
-	// Helper function to convert int to pgtype.Int4
-	toInt4 := func(i int) pgtype.Int4 {
-		if i == 0 {
-			return pgtype.Int4{Valid: false}
-		}
-		return pgtype.Int4{Int32: int32(i), Valid: true}
+	var previousProcessEProcessAddress, previousProcessName pgtype.Text
+	var previousProcessID pgtype.Int4
+	if processInfo.PreviousProcessEProcessAddress != nil {
+		previousProcessEProcessAddress = pgtype.Text{String: *processInfo.PreviousProcessEProcessAddress, Valid: true}
+	}
+	if processInfo.PreviousProcessName != nil {
+		previousProcessName = pgtype.Text{String: *processInfo.PreviousProcessName, Valid: true}
+	}
+	if processInfo.PreviousProcessID != nil {
+		previousProcessID = pgtype.Int4{Int32: *processInfo.PreviousProcessID, Valid: true}
 	}
 
-	params := db.CreateProcessInfoParams{
+	createdProcess, err := h.queries.CreateProcessInfo(ctx, db.CreateProcessInfoParams{
+		SnapshotID:                     snapshotID,
 		UserID:                         userIDParam,
-		ProcessID:                      int32(processInfo.ProcessID),
-		ParentProcessID:                int32(processInfo.ParentProcessID),
+		ProcessID:                      processInfo.ProcessID,
+		ParentProcessID:                processInfo.ParentProcessID,
 		ProcessName:                    processInfo.ProcessName,
-		ThreadCount:                    int32(processInfo.ThreadCount),
-		HandleCount:                    int32(processInfo.HandleCount),
-		BasePriority:                   int32(processInfo.BasePriority),
+		ThreadCount:                    processInfo.ThreadCount,
+		HandleCount:                    processInfo.HandleCount,
+		BasePriority:                   processInfo.BasePriority,
 		CreateTime:                     processInfo.CreateTime,
 		UserTime:                       processInfo.UserTime,
 		KernelTime:                     processInfo.KernelTime,
@@ -158,7 +163,7 @@ func (h *WebhookHandler) persistProcessInfo(ctx context.Context, userID *int64, 
 		PeakVirtualSize:                processInfo.PeakVirtualSize,
 		PagefileUsage:                  processInfo.PagefileUsage,
 		PeakPagefileUsage:              processInfo.PeakPagefileUsage,
-		PageFaultCount:                 int32(processInfo.PageFaultCount),
+		PageFaultCount:                 processInfo.PageFaultCount,
 		ReadOperationCount:             processInfo.ReadOperationCount,
 		WriteOperationCount:            processInfo.WriteOperationCount,
 		OtherOperationCount:            processInfo.OtherOperationCount,
@@ -166,200 +171,234 @@ func (h *WebhookHandler) persistProcessInfo(ctx context.Context, userID *int64, 
 		WriteTransferCount:             processInfo.WriteTransferCount,
 		OtherTransferCount:             processInfo.OtherTransferCount,
 		CurrentProcessAddress:          processInfo.CurrentProcessAddress,
-		NextProcessEprocessAddress:     toText(processInfo.NextProcess.EProcessAddress),
-		NextProcessName:                toText(processInfo.NextProcess.ProcessName),
-		NextProcessID:                  toInt4(processInfo.NextProcess.ProcessID),
-		PreviousProcessEprocessAddress: toText(processInfo.PreviousProcess.EProcessAddress),
-		PreviousProcessName:            toText(processInfo.PreviousProcess.ProcessName),
-		PreviousProcessID:              toInt4(processInfo.PreviousProcess.ProcessID),
-	}
+		NextProcessEprocessAddress:     nextProcessEProcessAddress,
+		NextProcessName:                nextProcessName,
+		NextProcessID:                  nextProcessID,
+		PreviousProcessEprocessAddress: previousProcessEProcessAddress,
+		PreviousProcessName:            previousProcessName,
+		PreviousProcessID:              previousProcessID,
+	})
 
-	result, err := h.queries.CreateProcessInfo(ctx, params)
 	if err != nil {
-		return 0, fmt.Errorf("erro ao persistir processo: %v", err)
+		return 0, fmt.Errorf("failed to create process info: %w", err)
 	}
 
-	return result.ID, nil
+	return createdProcess.ID, nil
 }
 
 func (h *WebhookHandler) IterateProcesses(c *fiber.Ctx) error {
-	webhookURL := c.Query("webhookurl")
-	if webhookURL == "" {
+	var req struct {
+		WebhookURL string `json:"webhook_url"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Parâmetro 'webhookurl' é obrigatório",
+			"error": "Invalid request body",
 		})
 	}
 
-	fullURL := webhookURL + "/webhook/iterate-processes"
+	if req.WebhookURL == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "webhook_url is required",
+		})
+	}
 
-	// Make the HTTP request to the webhook
-	responseBody, err := h.makeHTTPRequest(fullURL, "POST", nil)
-	if err != nil {
-		// If there's an error and user is authenticated, log the failed attempt
-		userID, _, ok := GetUserFromContext(c)
-		if ok {
-			ctx := context.Background()
-			var userIDParam pgtype.Int8
-			userIDParam = pgtype.Int8{Int64: userID, Valid: true}
-
-			_, _ = h.queries.CreateProcessIterationHistory(ctx, db.CreateProcessIterationHistoryParams{
-				UserID:       userIDParam,
-				WebhookUrl:   webhookURL,
-				ProcessCount: 0,
-				Success:      false,
-				ErrorMessage: pgtype.Text{String: err.Error(), Valid: true},
-			})
+	// Get user ID from JWT context (if authenticated)
+	var userID *int64
+	if userIDVal := c.Locals("userID"); userIDVal != nil {
+		if uid, ok := userIDVal.(int64); ok {
+			userID = &uid
 		}
+	}
+
+	// Make request to webhook
+	respBody, err := h.makeHTTPRequest(req.WebhookURL, "GET", nil)
+	if err != nil {
+		// Create failed snapshot
+		var userIDParam pgtype.Int8
+		if userID != nil {
+			userIDParam = pgtype.Int8{Int64: *userID, Valid: true}
+		}
+
+		_, _ = h.queries.CreateProcessSnapshot(c.Context(), db.CreateProcessSnapshotParams{
+			UserID:       userIDParam,
+			WebhookUrl:   req.WebhookURL,
+			SnapshotType: "iteration",
+			ProcessCount: 0,
+			Success:      false,
+			ErrorMessage: pgtype.Text{String: err.Error(), Valid: true},
+		})
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": fmt.Sprintf("Erro ao fazer requisição para %s: %v", fullURL, err),
+			"error": fmt.Sprintf("Failed to call webhook: %v", err),
 		})
 	}
 
-	var response IterateProcessesResponse
-	if err := json.Unmarshal(responseBody, &response); err != nil {
-		return c.JSON(fiber.Map{
-			"data": string(responseBody),
+	// Parse response
+	var webhookResp IterateProcessesResponse
+	if err := json.Unmarshal(respBody, &webhookResp); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to parse webhook response",
 		})
 	}
 
-	// Check if user is authenticated (has valid JWT)
-	userID, _, ok := GetUserFromContext(c)
-	if ok && response.Success {
-		// User is authenticated, persist the data
-		ctx := context.Background()
+	// Create snapshot
+	var userIDParam pgtype.Int8
+	if userID != nil {
+		userIDParam = pgtype.Int8{Int64: *userID, Valid: true}
+	}
 
-		var userIDParam pgtype.Int8
-		userIDParam = pgtype.Int8{Int64: userID, Valid: true}
+	snapshot, err := h.queries.CreateProcessSnapshot(c.Context(), db.CreateProcessSnapshotParams{
+		UserID:       userIDParam,
+		WebhookUrl:   req.WebhookURL,
+		SnapshotType: "iteration",
+		ProcessCount: int32(len(webhookResp.Processes)),
+		Success:      true,
+		ErrorMessage: pgtype.Text{Valid: false},
+	})
 
-		// Create iteration history record
-		iterationHistory, err := h.queries.CreateProcessIterationHistory(ctx, db.CreateProcessIterationHistoryParams{
-			UserID:       userIDParam,
-			WebhookUrl:   webhookURL,
-			ProcessCount: int32(response.ProcessCount),
-			Success:      true,
-			ErrorMessage: pgtype.Text{Valid: false},
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create snapshot",
 		})
+	}
 
+	// Persist all processes to this snapshot
+	processIDs := make([]int64, 0, len(webhookResp.Processes))
+	for _, processInfo := range webhookResp.Processes {
+		processID, err := h.persistProcessInfo(c.Context(), snapshot.ID, userID, processInfo)
 		if err != nil {
-			log.Errorf("Erro ao criar histórico de iteração: %v", err)
-		} else {
-			// Persist each process and link to iteration
-			for _, processInfo := range response.Processes {
-				processInfoID, err := h.persistProcessInfo(ctx, &userID, processInfo)
-				if err != nil {
-					log.Errorf("Erro ao persistir processo %d: %v", processInfo.ProcessID, err)
-					continue
-				}
-
-				// Link process to iteration
-				_, err = h.queries.CreateIterationProcess(ctx, db.CreateIterationProcessParams{
-					IterationID:   iterationHistory.ID,
-					ProcessInfoID: processInfoID,
-				})
-				if err != nil {
-					log.Errorf("Erro ao vincular processo %d à iteração: %v", processInfo.ProcessID, err)
-				}
-			}
-
-			log.Infof("Persistidos %d processos para o usuário %d", len(response.Processes), userID)
+			// Log error but continue with other processes
+			fmt.Printf("Failed to persist process %d: %v\n", processInfo.ProcessID, err)
+			continue
 		}
+		processIDs = append(processIDs, processID)
 	}
 
-	return c.JSON(fiber.Map{
-		"data": response,
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":       "Processes iterated and persisted successfully",
+		"snapshot_id":   snapshot.ID,
+		"process_count": len(processIDs),
+		"processes":     webhookResp.Processes,
 	})
 }
 
 func (h *WebhookHandler) ProcessByPid(c *fiber.Ctx) error {
-	webhookURL := c.Query("webhookurl")
-	if webhookURL == "" {
+	var req struct {
+		WebhookURL string `json:"webhook_url"`
+		Pid        int32  `json:"pid"`
+		SnapshotID *int64 `json:"snapshot_id,omitempty"` // Optional: add to existing snapshot
+	}
+
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Parâmetro 'webhookurl' é obrigatório",
+			"error": "Invalid request body",
 		})
 	}
 
-	var reqBody ProcessByPidRequest
-	if err := c.BodyParser(&reqBody); err != nil {
+	if req.WebhookURL == "" || req.Pid == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Erro ao fazer parse do body da requisição",
+			"error": "webhook_url and pid are required",
 		})
 	}
 
-	if reqBody.PID <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "PID deve ser um número positivo",
-		})
+	// Get user ID from JWT context (if authenticated)
+	var userID *int64
+	if userIDVal := c.Locals("userID"); userIDVal != nil {
+		if uid, ok := userIDVal.(int64); ok {
+			userID = &uid
+		}
 	}
 
-	fullURL := webhookURL + "/webhook/process-by-pid"
-
-	// Make the HTTP request to the webhook
-	responseBody, err := h.makeHTTPRequest(fullURL, "POST", reqBody)
+	// Make request to webhook
+	webhookReq := ProcessByPidRequest{Pid: req.Pid}
+	respBody, err := h.makeHTTPRequest(req.WebhookURL, "POST", webhookReq)
 	if err != nil {
-		// If there's an error and user is authenticated, log the failed attempt
-		userID, _, ok := GetUserFromContext(c)
-		if ok {
-			ctx := context.Background()
-			var userIDParam pgtype.Int8
-			userIDParam = pgtype.Int8{Int64: userID, Valid: true}
-
-			_, _ = h.queries.CreateProcessQueryHistory(ctx, db.CreateProcessQueryHistoryParams{
-				UserID:        userIDParam,
-				WebhookUrl:    webhookURL,
-				RequestedPid:  int32(reqBody.PID),
-				ProcessInfoID: pgtype.Int8{Valid: false},
-				Success:       false,
-				ErrorMessage:  pgtype.Text{String: err.Error(), Valid: true},
-			})
-		}
-
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": fmt.Sprintf("Erro ao fazer requisição para %s: %v", fullURL, err),
+			"error": fmt.Sprintf("Failed to call webhook: %v", err),
 		})
 	}
 
-	log.Info(responseBody)
-	var response ProcessByPidResponse
-	if err := json.Unmarshal(responseBody, &response); err != nil {
-		return c.JSON(fiber.Map{
-			"data": string(responseBody),
+	// Parse response
+	var webhookResp ProcessByPidResponse
+	if err := json.Unmarshal(respBody, &webhookResp); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to parse webhook response",
 		})
 	}
 
-	// Check if user is authenticated (has valid JWT)
-	userID, _, ok := GetUserFromContext(c)
-	if ok && response.Success {
-		// User is authenticated, persist the data
-		ctx := context.Background()
+	var userIDParam pgtype.Int8
+	if userID != nil {
+		userIDParam = pgtype.Int8{Int64: *userID, Valid: true}
+	}
 
-		// Persist the process info
-		processInfoID, err := h.persistProcessInfo(ctx, &userID, response.ProcessInfo)
+	// Determine which snapshot to use
+	var snapshotID int64
+	if req.SnapshotID != nil {
+		// Add to existing snapshot
+		snapshotID = *req.SnapshotID
+
+		// Update snapshot process count
+		snapshot, err := h.queries.GetProcessSnapshot(c.Context(), snapshotID)
 		if err != nil {
-			log.Errorf("Erro ao persistir processo %d: %v", response.ProcessInfo.ProcessID, err)
-		} else {
-			// Create query history record
-			var userIDParam pgtype.Int8
-			userIDParam = pgtype.Int8{Int64: userID, Valid: true}
-
-			_, err = h.queries.CreateProcessQueryHistory(ctx, db.CreateProcessQueryHistoryParams{
-				UserID:        userIDParam,
-				WebhookUrl:    webhookURL,
-				RequestedPid:  int32(reqBody.PID),
-				ProcessInfoID: pgtype.Int8{Int64: processInfoID, Valid: true},
-				Success:       true,
-				ErrorMessage:  pgtype.Text{Valid: false},
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Snapshot not found",
 			})
-
-			if err != nil {
-				log.Errorf("Erro ao criar histórico de query: %v", err)
-			} else {
-				log.Infof("Persistido processo %d para o usuário %d", response.ProcessInfo.ProcessID, userID)
-			}
 		}
+
+		err = h.queries.UpdateProcessSnapshotCount(c.Context(), db.UpdateProcessSnapshotCountParams{
+			ID:           snapshotID,
+			ProcessCount: snapshot.ProcessCount + 1,
+		})
+		if err != nil {
+			fmt.Printf("Failed to update snapshot count: %v\n", err)
+		}
+	} else {
+		// Create new snapshot for this query
+		snapshot, err := h.queries.CreateProcessSnapshot(c.Context(), db.CreateProcessSnapshotParams{
+			UserID:       userIDParam,
+			WebhookUrl:   req.WebhookURL,
+			SnapshotType: "query",
+			ProcessCount: 1,
+			Success:      true,
+			ErrorMessage: pgtype.Text{Valid: false},
+		})
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to create snapshot",
+			})
+		}
+		snapshotID = snapshot.ID
 	}
 
-	return c.JSON(fiber.Map{
-		"data": response,
+	// Persist process info
+	processInfoID, err := h.persistProcessInfo(c.Context(), snapshotID, userID, webhookResp.Process)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to persist process info",
+		})
+	}
+
+	// Create query history record
+	_, err = h.queries.CreateProcessQuery(c.Context(), db.CreateProcessQueryParams{
+		SnapshotID:    snapshotID,
+		UserID:        userIDParam,
+		WebhookUrl:    req.WebhookURL,
+		RequestedPid:  req.Pid,
+		ProcessInfoID: pgtype.Int8{Int64: processInfoID, Valid: true},
+		Success:       true,
+		ErrorMessage:  pgtype.Text{Valid: false},
+	})
+
+	if err != nil {
+		// Log error but don't fail the request
+		fmt.Printf("Failed to create query history: %v\n", err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":         "Process queried and persisted successfully",
+		"snapshot_id":     snapshotID,
+		"process_info_id": processInfoID,
+		"process":         webhookResp.Process,
 	})
 }
