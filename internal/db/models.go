@@ -8,36 +8,68 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type IterationProcess struct {
+	ID            int64            `json:"id"`
+	IterationID   int64            `json:"iteration_id"`
+	ProcessInfoID int64            `json:"process_info_id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+}
+
 type ProcessInfo struct {
-	ID                     int64            `json:"id"`
-	UserID                 int64            `json:"user_id"`
-	ProcessID              int64            `json:"process_id"`
-	ParentProcessID        int64            `json:"parent_process_id"`
-	ProcessName            string           `json:"process_name"`
-	ThreadCount            int64            `json:"thread_count"`
-	HandleCount            int64            `json:"handle_count"`
-	BasePriority           int32            `json:"base_priority"`
-	CreateTime             pgtype.Timestamp `json:"create_time"`
-	UserTime               int64            `json:"user_time"`
-	KernelTime             int64            `json:"kernel_time"`
-	WorkingSetSize         int64            `json:"working_set_size"`
-	PeakWorkingSetSize     int64            `json:"peak_working_set_size"`
-	VirtualSize            int64            `json:"virtual_size"`
-	PeakVirtualSize        int64            `json:"peak_virtual_size"`
-	PagefileUsage          int64            `json:"pagefile_usage"`
-	PeakPagefileUsage      int64            `json:"peak_pagefile_usage"`
-	PageFaultCount         int64            `json:"page_fault_count"`
-	ReadOperationCount     int64            `json:"read_operation_count"`
-	WriteOperationCount    int64            `json:"write_operation_count"`
-	OtherOperationCount    int64            `json:"other_operation_count"`
-	ReadTransferCount      int64            `json:"read_transfer_count"`
-	WriteTransferCount     int64            `json:"write_transfer_count"`
-	OtherTransferCount     int64            `json:"other_transfer_count"`
-	CurrentProcessAddress  pgtype.Text      `json:"current_process_address"`
-	NextProcessAddress     pgtype.Text      `json:"next_process_address"`
-	PreviousProcessAddress pgtype.Text      `json:"previous_process_address"`
-	CreatedAt              pgtype.Timestamp `json:"created_at"`
-	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
+	ID                             int64            `json:"id"`
+	UserID                         pgtype.Int8      `json:"user_id"`
+	ProcessID                      int32            `json:"process_id"`
+	ParentProcessID                int32            `json:"parent_process_id"`
+	ProcessName                    string           `json:"process_name"`
+	ThreadCount                    int32            `json:"thread_count"`
+	HandleCount                    int32            `json:"handle_count"`
+	BasePriority                   int32            `json:"base_priority"`
+	CreateTime                     string           `json:"create_time"`
+	UserTime                       string           `json:"user_time"`
+	KernelTime                     string           `json:"kernel_time"`
+	WorkingSetSize                 string           `json:"working_set_size"`
+	PeakWorkingSetSize             string           `json:"peak_working_set_size"`
+	VirtualSize                    string           `json:"virtual_size"`
+	PeakVirtualSize                string           `json:"peak_virtual_size"`
+	PagefileUsage                  string           `json:"pagefile_usage"`
+	PeakPagefileUsage              string           `json:"peak_pagefile_usage"`
+	PageFaultCount                 int32            `json:"page_fault_count"`
+	ReadOperationCount             int64            `json:"read_operation_count"`
+	WriteOperationCount            int64            `json:"write_operation_count"`
+	OtherOperationCount            int64            `json:"other_operation_count"`
+	ReadTransferCount              int64            `json:"read_transfer_count"`
+	WriteTransferCount             int64            `json:"write_transfer_count"`
+	OtherTransferCount             int64            `json:"other_transfer_count"`
+	CurrentProcessAddress          string           `json:"current_process_address"`
+	NextProcessEprocessAddress     pgtype.Text      `json:"next_process_eprocess_address"`
+	NextProcessName                pgtype.Text      `json:"next_process_name"`
+	NextProcessID                  pgtype.Int4      `json:"next_process_id"`
+	PreviousProcessEprocessAddress pgtype.Text      `json:"previous_process_eprocess_address"`
+	PreviousProcessName            pgtype.Text      `json:"previous_process_name"`
+	PreviousProcessID              pgtype.Int4      `json:"previous_process_id"`
+	CreatedAt                      pgtype.Timestamp `json:"created_at"`
+	UpdatedAt                      pgtype.Timestamp `json:"updated_at"`
+}
+
+type ProcessIterationHistory struct {
+	ID           int64            `json:"id"`
+	UserID       pgtype.Int8      `json:"user_id"`
+	WebhookUrl   string           `json:"webhook_url"`
+	ProcessCount int32            `json:"process_count"`
+	Success      bool             `json:"success"`
+	ErrorMessage pgtype.Text      `json:"error_message"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+}
+
+type ProcessQueryHistory struct {
+	ID            int64            `json:"id"`
+	UserID        pgtype.Int8      `json:"user_id"`
+	WebhookUrl    string           `json:"webhook_url"`
+	RequestedPid  int32            `json:"requested_pid"`
+	ProcessInfoID pgtype.Int8      `json:"process_info_id"`
+	Success       bool             `json:"success"`
+	ErrorMessage  pgtype.Text      `json:"error_message"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
 }
 
 type User struct {

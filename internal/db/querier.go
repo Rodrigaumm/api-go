@@ -6,19 +6,56 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	// ============================================================================
+	// Iteration Processes (Link Table) Queries
+	// ============================================================================
+	CreateIterationProcess(ctx context.Context, arg CreateIterationProcessParams) (IterationProcess, error)
+	// ============================================================================
 	// Process Info Queries
+	// ============================================================================
 	CreateProcessInfo(ctx context.Context, arg CreateProcessInfoParams) (ProcessInfo, error)
+	// ============================================================================
+	// Process Iteration History Queries
+	// ============================================================================
+	CreateProcessIterationHistory(ctx context.Context, arg CreateProcessIterationHistoryParams) (ProcessIterationHistory, error)
+	// ============================================================================
+	// Process Query History Queries
+	// ============================================================================
+	CreateProcessQueryHistory(ctx context.Context, arg CreateProcessQueryHistoryParams) (ProcessQueryHistory, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProcessInfo(ctx context.Context, arg DeleteProcessInfoParams) error
 	DeleteUser(ctx context.Context, id int64) error
+	GetAllProcessInfos(ctx context.Context, arg GetAllProcessInfosParams) ([]ProcessInfo, error)
+	GetAllProcessIterationHistory(ctx context.Context, arg GetAllProcessIterationHistoryParams) ([]ProcessIterationHistory, error)
+	GetAllProcessQueryHistory(ctx context.Context, arg GetAllProcessQueryHistoryParams) ([]ProcessQueryHistory, error)
+	GetIterationsByProcessInfoID(ctx context.Context, processInfoID int64) ([]ProcessIterationHistory, error)
+	GetMostQueriedProcesses(ctx context.Context, arg GetMostQueriedProcessesParams) ([]GetMostQueriedProcessesRow, error)
 	GetProcessInfo(ctx context.Context, arg GetProcessInfoParams) (ProcessInfo, error)
-	GetProcessInfosByProcessId(ctx context.Context, arg GetProcessInfosByProcessIdParams) ([]ProcessInfo, error)
-	GetProcessInfosByUser(ctx context.Context, userID int64) ([]ProcessInfo, error)
+	GetProcessInfoByID(ctx context.Context, id int64) (ProcessInfo, error)
+	GetProcessInfosByProcessID(ctx context.Context, arg GetProcessInfosByProcessIDParams) ([]ProcessInfo, error)
+	GetProcessInfosByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessInfo, error)
+	GetProcessInfosByUserPaginated(ctx context.Context, arg GetProcessInfosByUserPaginatedParams) ([]ProcessInfo, error)
+	GetProcessIterationHistory(ctx context.Context, id int64) (ProcessIterationHistory, error)
+	GetProcessIterationHistoryByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessIterationHistory, error)
+	GetProcessIterationHistoryByUserPaginated(ctx context.Context, arg GetProcessIterationHistoryByUserPaginatedParams) ([]ProcessIterationHistory, error)
+	GetProcessQueryHistory(ctx context.Context, id int64) (ProcessQueryHistory, error)
+	GetProcessQueryHistoryByPID(ctx context.Context, arg GetProcessQueryHistoryByPIDParams) ([]GetProcessQueryHistoryByPIDRow, error)
+	GetProcessQueryHistoryByUser(ctx context.Context, userID pgtype.Int8) ([]ProcessQueryHistory, error)
+	GetProcessQueryHistoryByUserPaginated(ctx context.Context, arg GetProcessQueryHistoryByUserPaginatedParams) ([]ProcessQueryHistory, error)
+	GetProcessesByIterationID(ctx context.Context, iterationID int64) ([]ProcessInfo, error)
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserByName(ctx context.Context, name string) (User, error)
+	GetUserIterationCount(ctx context.Context, userID pgtype.Int8) (int64, error)
+	// ============================================================================
+	// Statistics and Analytics Queries
+	// ============================================================================
+	GetUserProcessCount(ctx context.Context, userID pgtype.Int8) (int64, error)
+	GetUserQueryCount(ctx context.Context, userID pgtype.Int8) (int64, error)
 	GetUsers(ctx context.Context) ([]User, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

@@ -71,7 +71,7 @@ func setupRoutes(app *fiber.App, dbpool *pgxpool.Pool) {
 	userHandler := handlers.NewUserHandler(dbpool)
 	authHandler := handlers.NewAuthHandler(dbpool)
 	processHandler := handlers.NewProcessHandler(dbpool)
-	webhookHandler := handlers.NewWebhookHandler()
+	webhookHandler := handlers.NewWebhookHandler(dbpool)
 
 	auth := api.Group("/auth")
 	auth.Post("/login", authHandler.Login)
