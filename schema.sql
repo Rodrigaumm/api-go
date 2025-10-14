@@ -28,8 +28,8 @@ CREATE TABLE process_info (
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE, -- NULL if no JWT token
     
     -- Basic process information
-    process_id INTEGER NOT NULL,
-    parent_process_id INTEGER NOT NULL,
+    process_id BIGINT NOT NULL,
+    parent_process_id BIGINT NOT NULL,
     process_name VARCHAR(255) NOT NULL,
     thread_count INTEGER NOT NULL,
     handle_count INTEGER NOT NULL,
@@ -37,17 +37,14 @@ CREATE TABLE process_info (
     
     -- Time information (stored as TEXT to match webhook response format)
     create_time TEXT NOT NULL,
-    user_time TEXT NOT NULL,
-    kernel_time TEXT NOT NULL,
+    user_time INTEGER NOT NULL,
+    kernel_time INTEGER NOT NULL,
     
     -- Memory information (stored as TEXT to match webhook response format)
-    working_set_size TEXT NOT NULL,
-    peak_working_set_size TEXT NOT NULL,
-    virtual_size TEXT NOT NULL,
-    peak_virtual_size TEXT NOT NULL,
-    pagefile_usage TEXT NOT NULL,
-    peak_pagefile_usage TEXT NOT NULL,
-    page_fault_count INTEGER NOT NULL,
+    working_set_size BIGINT NOT NULL,
+    peak_working_set_size BIGINT NOT NULL,
+    virtual_size BIGINT NOT NULL,
+    peak_virtual_size BIGINT NOT NULL,
     
     -- I/O information
     read_operation_count BIGINT NOT NULL,
@@ -63,12 +60,12 @@ CREATE TABLE process_info (
     -- Next process information
     next_process_eprocess_address TEXT,
     next_process_name VARCHAR(255),
-    next_process_id INTEGER,
+    next_process_id BIGINT,
     
     -- Previous process information
     previous_process_eprocess_address TEXT,
     previous_process_name VARCHAR(255),
-    previous_process_id INTEGER,
+    previous_process_id BIGINT,
     
     -- Metadata
     created_at TIMESTAMP DEFAULT NOW(),

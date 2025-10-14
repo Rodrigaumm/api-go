@@ -39,7 +39,21 @@ users
 - `DELETE /api/v1/users/:id` - Deletar usuário
 
 ### Webhooks (Captura de Processos)
-- `POST /api/v1/webhook/iterate-processes` - Itera todos os processos e cria um novo snapshot
+
+**Autenticação Opcional**: Estes endpoints funcionam com ou sem autenticação JWT.
+
+- **Com autenticação** (Header: `Authorization: Bearer <token>`):
+  - Cria snapshot vinculado ao usuário
+  - Persiste todos os dados no banco de dados
+  - Permite adicionar processos a snapshots existentes do usuário
+
+- **Sem autenticação**:
+  - Retorna os dados do webhook sem persistir
+  - Útil para testes ou consultas rápidas
+  - Não cria snapshots nem salva no banco
+
+#### Endpoints:
+- `POST /api/v1/webhook/iterate-processes` - Itera todos os processos
 - `POST /api/v1/webhook/process-by-pid` - Consulta processo por PID
 
 ### Snapshots (Requer JWT)
@@ -62,11 +76,32 @@ users
 
 ## Exemplos de Uso
 
-### 1. Capturar todos os processos (Criar novo snapshot)
+### 1. Capturar todos os processos - SEM autenticação (não persiste)
 
 ```bash
 POST /api/v1/webhook/iterate-processes
 Content-Type: application/json
+
+{
+  "webhook_url": "http://localhost:8080/iterate-processes"
+}
+```
+
+**Resposta:**
+```json
+{
+  "message": "Processes iterated successfully (not persisted - no authentication)",
+  "process_count": 150,
+  "processes": [...]
+}
+```
+
+### 2. Capturar todos os processos - COM autenticação (persiste em snapshot)
+
+```bash
+POST /api/v1/webhook/iterate-processes
+Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "webhook_url": "http://localhost:8080/iterate-processes"
@@ -83,11 +118,32 @@ Content-Type: application/json
 }
 ```
 
-### 2. Consultar processo por PID (Criar novo snapshot)
+### 3. Consultar processo por PID - SEM autenticação (não persiste)
 
 ```bash
 POST /api/v1/webhook/process-by-pid
 Content-Type: application/json
+
+{
+  "webhook_url": "http://localhost:8080/process-by-pid",
+  "pid": 1234
+}
+```
+
+**Resposta:**
+```json
+{
+  "message": "Process queried successfully (not persisted - no authentication)",
+  "process": {...}
+}
+```
+
+### 4. Consultar processo por PID - COM autenticação (cria novo snapshot)
+
+```bash
+POST /api/v1/webhook/process-by-pid
+Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "webhook_url": "http://localhost:8080/process-by-pid",
@@ -105,7 +161,7 @@ Content-Type: application/json
 }
 ```
 
-### 3. Consultar processo por PID (Adicionar a snapshot existente)
+### 5. Consultar processo por PID - Adicionar a snapshot existente
 
 ```bash
 POST /api/v1/webhook/process-by-pid
@@ -129,7 +185,9 @@ Authorization: Bearer <token>
 }
 ```
 
-### 4. Listar todos os snapshots
+**Nota**: Ao adicionar a um snapshot existente, o sistema verifica se o snapshot pertence ao usuário autenticado. Se não pertencer, retorna erro 403 (Forbidden).
+
+### 6. Listar todos os snapshots
 
 ```bash
 GET /api/v1/processes/snapshots
@@ -222,29 +280,54 @@ Authorization: Bearer <token>
 
 ## Fluxo de Trabalho no Frontend
 
-### Cenário 1: Visualizar histórico de capturas
-1. Chamar `GET /api/v1/processes/snapshots` para listar todos os snapshots
-2. Exibir lista de snapshots com data, tipo e quantidade de processos
-3. Ao clicar em um snapshot, chamar `GET /api/v1/processes/snapshots/:id/processes`
-4. Exibir lista detalhada de processos daquele snapshot
+### Cenário 1: Teste rápido sem autenticação
+1. Usuário quer apenas visualizar processos sem salvar
+2. Frontend chama `POST /api/v1/webhook/iterate-processes` sem token
+3. API retorna os processos mas não persiste nada
+4. Útil para demonstrações ou testes rápidos
 
-### Cenário 2: Capturar novos processos
-1. Usuário clica em "Capturar Processos"
-2. Frontend chama `POST /api/v1/webhook/iterate-processes`
-3. API cria novo snapshot e retorna `snapshot_id`
+### Cenário 2: Visualizar histórico de capturas (requer autenticação)
+1. Usuário faz login e obtém token JWT
+2. Frontend chama `GET /api/v1/processes/snapshots` com o token
+3. Exibir lista de snapshots com data, tipo e quantidade de processos
+4. Ao clicar em um snapshot, chamar `GET /api/v1/processes/snapshots/:id/processes`
+5. Exibir lista detalhada de processos daquele snapshot
+
+### Cenário 3: Capturar e salvar processos (requer autenticação)
+1. Usuário autenticado clica em "Capturar Processos"
+2. Frontend chama `POST /api/v1/webhook/iterate-processes` com token JWT
+3. API cria novo snapshot vinculado ao usuário e retorna `snapshot_id`
 4. Frontend redireciona para visualização do novo snapshot
 
-### Cenário 3: Consultar processo específico
+### Cenário 4: Consultar processo específico
+**Opção A - Sem autenticação (apenas visualizar):**
 1. Usuário digita um PID e clica em "Consultar"
-2. Frontend pode:
-   - Criar novo snapshot: `POST /api/v1/webhook/process-by-pid` (sem `snapshot_id`)
-   - Adicionar a snapshot existente: `POST /api/v1/webhook/process-by-pid` (com `snapshot_id`)
-3. Exibir detalhes do processo consultado
+2. Frontend chama `POST /api/v1/webhook/process-by-pid` sem token
+3. Exibir detalhes do processo (não salvo)
 
-### Cenário 4: Comparar processos ao longo do tempo
+**Opção B - Com autenticação (salvar em novo snapshot):**
+1. Usuário autenticado digita um PID
+2. Frontend chama `POST /api/v1/webhook/process-by-pid` com token (sem `snapshot_id`)
+3. API cria novo snapshot e salva o processo
+4. Exibir detalhes e opção de ver o snapshot
+
+**Opção C - Com autenticação (adicionar a snapshot existente):**
+1. Usuário está visualizando um snapshot específico
+2. Usuário digita um PID para adicionar ao snapshot atual
+3. Frontend chama `POST /api/v1/webhook/process-by-pid` com token e `snapshot_id`
+4. API adiciona o processo ao snapshot existente
+5. Atualizar a lista de processos do snapshot
+
+### Cenário 5: Comparar processos ao longo do tempo (requer autenticação)
 1. Chamar `GET /api/v1/processes/pid/:pid` para obter todas as capturas de um PID específico
 2. Exibir timeline com as diferentes capturas
 3. Permitir comparação de métricas (memória, CPU, etc.)
+
+### Cenário 6: Gerenciar snapshots (requer autenticação)
+1. Listar snapshots por tipo: `GET /api/v1/processes/snapshots/type/iteration` ou `/type/query`
+2. Ver detalhes de um snapshot: `GET /api/v1/processes/snapshots/:id`
+3. Ver histórico de consultas de um snapshot: `GET /api/v1/processes/snapshots/:id/queries`
+4. Deletar snapshot antigo: `DELETE /api/v1/processes/snapshots/:id`
 
 ## Migração de Dados Existentes
 
@@ -269,6 +352,35 @@ Este script irá:
 4. **Performance**: Índices otimizados para consultas comuns
 5. **Cascata**: Deletar um snapshot remove automaticamente todos os processos vinculados
 6. **Rastreabilidade**: Cada consulta por PID é registrada com seu snapshot
+7. **Autenticação Opcional**: Endpoints de webhook funcionam com ou sem autenticação
+8. **Segurança**: Snapshots são isolados por usuário, impedindo acesso não autorizado
+
+## Segurança e Controle de Acesso
+
+### Endpoints Públicos (Sem Autenticação)
+- `POST /api/v1/auth/login` - Login
+- `GET/POST/PUT/DELETE /api/v1/users/*` - Gerenciamento de usuários
+- `POST /api/v1/webhook/*` - Webhooks (modo somente leitura, sem persistência)
+
+### Endpoints Protegidos (Requer JWT)
+- `GET/DELETE /api/v1/processes/*` - Todos os endpoints de processos e snapshots
+- `POST /api/v1/webhook/*` - Webhooks (modo persistência, cria snapshots)
+
+### Isolamento de Dados
+- Cada snapshot pertence a um usuário específico
+- Usuários só podem acessar seus próprios snapshots
+- Ao adicionar processo a snapshot existente, verifica-se a propriedade
+- Tentativa de acesso a snapshot de outro usuário retorna 403 (Forbidden)
+
+### Comportamento dos Webhooks
+
+| Situação | Comportamento |
+|----------|---------------|
+| Sem token JWT | Retorna dados do webhook sem persistir |
+| Com token JWT válido | Cria snapshot vinculado ao usuário e persiste |
+| Com token JWT inválido | Retorna dados sem persistir (não falha) |
+| Adicionar a snapshot de outro usuário | Retorna 403 Forbidden |
+| Adicionar a snapshot inexistente | Retorna 404 Not Found |
 
 ## Estrutura do Projeto
 

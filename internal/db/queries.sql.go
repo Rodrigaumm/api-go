@@ -66,9 +66,6 @@ INSERT INTO process_info (
     peak_working_set_size,
     virtual_size,
     peak_virtual_size,
-    pagefile_usage,
-    peak_pagefile_usage,
-    page_fault_count,
     read_operation_count,
     write_operation_count,
     other_operation_count,
@@ -85,29 +82,26 @@ INSERT INTO process_info (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
-) RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at
+    $21, $22, $23, $24, $25, $26, $27, $28
+) RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at
 `
 
 type CreateProcessInfoParams struct {
 	SnapshotID                     int64       `json:"snapshot_id"`
 	UserID                         pgtype.Int8 `json:"user_id"`
-	ProcessID                      int32       `json:"process_id"`
-	ParentProcessID                int32       `json:"parent_process_id"`
+	ProcessID                      int64       `json:"process_id"`
+	ParentProcessID                int64       `json:"parent_process_id"`
 	ProcessName                    string      `json:"process_name"`
 	ThreadCount                    int32       `json:"thread_count"`
 	HandleCount                    int32       `json:"handle_count"`
 	BasePriority                   int32       `json:"base_priority"`
 	CreateTime                     string      `json:"create_time"`
-	UserTime                       string      `json:"user_time"`
-	KernelTime                     string      `json:"kernel_time"`
-	WorkingSetSize                 string      `json:"working_set_size"`
-	PeakWorkingSetSize             string      `json:"peak_working_set_size"`
-	VirtualSize                    string      `json:"virtual_size"`
-	PeakVirtualSize                string      `json:"peak_virtual_size"`
-	PagefileUsage                  string      `json:"pagefile_usage"`
-	PeakPagefileUsage              string      `json:"peak_pagefile_usage"`
-	PageFaultCount                 int32       `json:"page_fault_count"`
+	UserTime                       int32       `json:"user_time"`
+	KernelTime                     int32       `json:"kernel_time"`
+	WorkingSetSize                 int64       `json:"working_set_size"`
+	PeakWorkingSetSize             int64       `json:"peak_working_set_size"`
+	VirtualSize                    int64       `json:"virtual_size"`
+	PeakVirtualSize                int64       `json:"peak_virtual_size"`
 	ReadOperationCount             int64       `json:"read_operation_count"`
 	WriteOperationCount            int64       `json:"write_operation_count"`
 	OtherOperationCount            int64       `json:"other_operation_count"`
@@ -117,10 +111,10 @@ type CreateProcessInfoParams struct {
 	CurrentProcessAddress          string      `json:"current_process_address"`
 	NextProcessEprocessAddress     pgtype.Text `json:"next_process_eprocess_address"`
 	NextProcessName                pgtype.Text `json:"next_process_name"`
-	NextProcessID                  pgtype.Int4 `json:"next_process_id"`
+	NextProcessID                  pgtype.Int8 `json:"next_process_id"`
 	PreviousProcessEprocessAddress pgtype.Text `json:"previous_process_eprocess_address"`
 	PreviousProcessName            pgtype.Text `json:"previous_process_name"`
-	PreviousProcessID              pgtype.Int4 `json:"previous_process_id"`
+	PreviousProcessID              pgtype.Int8 `json:"previous_process_id"`
 }
 
 // ============================================
@@ -143,9 +137,6 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 		arg.PeakWorkingSetSize,
 		arg.VirtualSize,
 		arg.PeakVirtualSize,
-		arg.PagefileUsage,
-		arg.PeakPagefileUsage,
-		arg.PageFaultCount,
 		arg.ReadOperationCount,
 		arg.WriteOperationCount,
 		arg.OtherOperationCount,
@@ -178,9 +169,6 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 		&i.PeakWorkingSetSize,
 		&i.VirtualSize,
 		&i.PeakVirtualSize,
-		&i.PagefileUsage,
-		&i.PeakPagefileUsage,
-		&i.PageFaultCount,
 		&i.ReadOperationCount,
 		&i.WriteOperationCount,
 		&i.OtherOperationCount,
@@ -390,7 +378,7 @@ func (q *Queries) GetMostQueriedProcesses(ctx context.Context, arg GetMostQuerie
 }
 
 const getProcessInfo = `-- name: GetProcessInfo :one
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info WHERE id = $1 LIMIT 1
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, error) {
@@ -413,9 +401,6 @@ func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, er
 		&i.PeakWorkingSetSize,
 		&i.VirtualSize,
 		&i.PeakVirtualSize,
-		&i.PagefileUsage,
-		&i.PeakPagefileUsage,
-		&i.PageFaultCount,
 		&i.ReadOperationCount,
 		&i.WriteOperationCount,
 		&i.OtherOperationCount,
@@ -436,14 +421,14 @@ func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, er
 }
 
 const getProcessInfoBySnapshotAndPID = `-- name: GetProcessInfoBySnapshotAndPID :one
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
 WHERE snapshot_id = $1 AND process_id = $2
 LIMIT 1
 `
 
 type GetProcessInfoBySnapshotAndPIDParams struct {
 	SnapshotID int64 `json:"snapshot_id"`
-	ProcessID  int32 `json:"process_id"`
+	ProcessID  int64 `json:"process_id"`
 }
 
 func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetProcessInfoBySnapshotAndPIDParams) (ProcessInfo, error) {
@@ -466,9 +451,6 @@ func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetPro
 		&i.PeakWorkingSetSize,
 		&i.VirtualSize,
 		&i.PeakVirtualSize,
-		&i.PagefileUsage,
-		&i.PeakPagefileUsage,
-		&i.PageFaultCount,
 		&i.ReadOperationCount,
 		&i.WriteOperationCount,
 		&i.OtherOperationCount,
@@ -489,14 +471,14 @@ func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetPro
 }
 
 const getProcessInfosByProcessID = `-- name: GetProcessInfosByProcessID :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
 WHERE (user_id = $1 OR user_id IS NULL) AND process_id = $2
 ORDER BY created_at DESC
 `
 
 type GetProcessInfosByProcessIDParams struct {
 	UserID    pgtype.Int8 `json:"user_id"`
-	ProcessID int32       `json:"process_id"`
+	ProcessID int64       `json:"process_id"`
 }
 
 func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcessInfosByProcessIDParams) ([]ProcessInfo, error) {
@@ -525,9 +507,6 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 			&i.PeakWorkingSetSize,
 			&i.VirtualSize,
 			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
 			&i.ReadOperationCount,
 			&i.WriteOperationCount,
 			&i.OtherOperationCount,
@@ -555,7 +534,7 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 }
 
 const getProcessInfosBySnapshot = `-- name: GetProcessInfosBySnapshot :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
 WHERE snapshot_id = $1
 ORDER BY process_id ASC
 `
@@ -586,9 +565,6 @@ func (q *Queries) GetProcessInfosBySnapshot(ctx context.Context, snapshotID int6
 			&i.PeakWorkingSetSize,
 			&i.VirtualSize,
 			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
 			&i.ReadOperationCount,
 			&i.WriteOperationCount,
 			&i.OtherOperationCount,
@@ -616,7 +592,7 @@ func (q *Queries) GetProcessInfosBySnapshot(ctx context.Context, snapshotID int6
 }
 
 const getProcessInfosByUser = `-- name: GetProcessInfosByUser :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, pagefile_usage, peak_pagefile_usage, page_fault_count, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
 WHERE user_id = $1 OR user_id IS NULL
 ORDER BY created_at DESC
 `
@@ -647,9 +623,6 @@ func (q *Queries) GetProcessInfosByUser(ctx context.Context, userID pgtype.Int8)
 			&i.PeakWorkingSetSize,
 			&i.VirtualSize,
 			&i.PeakVirtualSize,
-			&i.PagefileUsage,
-			&i.PeakPagefileUsage,
-			&i.PageFaultCount,
 			&i.ReadOperationCount,
 			&i.WriteOperationCount,
 			&i.OtherOperationCount,

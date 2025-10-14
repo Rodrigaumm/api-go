@@ -72,9 +72,6 @@ INSERT INTO process_info (
     peak_working_set_size,
     virtual_size,
     peak_virtual_size,
-    pagefile_usage,
-    peak_pagefile_usage,
-    page_fault_count,
     read_operation_count,
     write_operation_count,
     other_operation_count,
@@ -91,7 +88,7 @@ INSERT INTO process_info (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+    $21, $22, $23, $24, $25, $26, $27, $28
 ) RETURNING *;
 
 -- name: GetProcessInfo :one

@@ -25,29 +25,26 @@ func NewProcessHandler(dbpool *pgxpool.Pool) *ProcessHandler {
 type AdjacentProcessResponse struct {
 	EProcessAddress *string `json:"eprocess_address,omitempty"`
 	ProcessName     *string `json:"process_name,omitempty"`
-	ProcessID       *int32  `json:"process_id,omitempty"`
+	ProcessID       *int64  `json:"process_id,omitempty"`
 }
 
 type ProcessInfoResponse struct {
 	ID                    int64                    `json:"id"`
 	SnapshotID            int64                    `json:"snapshot_id"`
 	UserID                *int64                   `json:"user_id,omitempty"`
-	ProcessID             int32                    `json:"process_id"`
-	ParentProcessID       int32                    `json:"parent_process_id"`
+	ProcessID             int64                    `json:"process_id"`
+	ParentProcessID       int64                    `json:"parent_process_id"`
 	ProcessName           string                   `json:"process_name"`
 	ThreadCount           int32                    `json:"thread_count"`
 	HandleCount           int32                    `json:"handle_count"`
 	BasePriority          int32                    `json:"base_priority"`
 	CreateTime            string                   `json:"create_time"`
-	UserTime              string                   `json:"user_time"`
-	KernelTime            string                   `json:"kernel_time"`
-	WorkingSetSize        string                   `json:"working_set_size"`
-	PeakWorkingSetSize    string                   `json:"peak_working_set_size"`
-	VirtualSize           string                   `json:"virtual_size"`
-	PeakVirtualSize       string                   `json:"peak_virtual_size"`
-	PagefileUsage         string                   `json:"pagefile_usage"`
-	PeakPagefileUsage     string                   `json:"peak_pagefile_usage"`
-	PageFaultCount        int32                    `json:"page_fault_count"`
+	UserTime              int32                    `json:"user_time"`
+	KernelTime            int32                    `json:"kernel_time"`
+	WorkingSetSize        int64                    `json:"working_set_size"`
+	PeakWorkingSetSize    int64                    `json:"peak_working_set_size"`
+	VirtualSize           int64                    `json:"virtual_size"`
+	PeakVirtualSize       int64                    `json:"peak_virtual_size"`
 	ReadOperationCount    int64                    `json:"read_operation_count"`
 	WriteOperationCount   int64                    `json:"write_operation_count"`
 	OtherOperationCount   int64                    `json:"other_operation_count"`
@@ -280,7 +277,7 @@ func (h *ProcessHandler) GetProcessInfosByProcessID(c *fiber.Ctx) error {
 
 	processes, err := h.queries.GetProcessInfosByProcessID(c.Context(), db.GetProcessInfosByProcessIDParams{
 		UserID:    pgtype.Int8{Int64: userID, Valid: true},
-		ProcessID: int32(processID),
+		ProcessID: int64(processID),
 	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -513,9 +510,6 @@ func toProcessInfoResponse(info db.ProcessInfo) ProcessInfoResponse {
 		PeakWorkingSetSize:    info.PeakWorkingSetSize,
 		VirtualSize:           info.VirtualSize,
 		PeakVirtualSize:       info.PeakVirtualSize,
-		PagefileUsage:         info.PagefileUsage,
-		PeakPagefileUsage:     info.PeakPagefileUsage,
-		PageFaultCount:        info.PageFaultCount,
 		ReadOperationCount:    info.ReadOperationCount,
 		WriteOperationCount:   info.WriteOperationCount,
 		OtherOperationCount:   info.OtherOperationCount,
@@ -540,7 +534,7 @@ func toProcessInfoResponse(info db.ProcessInfo) ProcessInfoResponse {
 			nextProcess.ProcessName = &info.NextProcessName.String
 		}
 		if info.NextProcessID.Valid {
-			nextProcess.ProcessID = &info.NextProcessID.Int32
+			nextProcess.ProcessID = &info.NextProcessID.Int64
 		}
 		response.NextProcess = nextProcess
 	}
@@ -554,7 +548,7 @@ func toProcessInfoResponse(info db.ProcessInfo) ProcessInfoResponse {
 			previousProcess.ProcessName = &info.PreviousProcessName.String
 		}
 		if info.PreviousProcessID.Valid {
-			previousProcess.ProcessID = &info.PreviousProcessID.Int32
+			previousProcess.ProcessID = &info.PreviousProcessID.Int64
 		}
 		response.PreviousProcess = previousProcess
 	}

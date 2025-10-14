@@ -101,9 +101,12 @@ func setupRoutes(app *fiber.App, dbpool *pgxpool.Pool) {
 	processes.Get("/queries/history", processHandler.GetQueryHistory)
 	processes.Get("/statistics", processHandler.GetStatistics)
 
-	// Webhook routes (no JWT required, but can use JWT if provided)
+	// Webhook routes (optional JWT - works with or without authentication)
+	// If authenticated: persists to user's snapshot
+	// If not authenticated: returns data without persisting
 	webhookHandler := handlers.NewWebhookHandler(dbpool)
 	webhook := api.Group("/webhook")
+	webhook.Use(handlers.OptionalJWTMiddleware()) // Optional authentication
 	webhook.Post("/iterate-processes", webhookHandler.IterateProcesses)
 	webhook.Post("/process-by-pid", webhookHandler.ProcessByPid)
 }
