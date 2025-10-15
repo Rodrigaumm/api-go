@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 
 	"go-api/internal/config"
 	"go-api/internal/handlers"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,7 +48,7 @@ func main() {
 		port = "3000"
 	}
 
-	log.Printf("Servidor rodando na porta %s", port)
+	log.Debug("Servidor rodando na porta ", port)
 	log.Fatal(app.Listen(":" + port))
 }
 
@@ -91,15 +91,15 @@ func setupRoutes(app *fiber.App, dbpool *pgxpool.Pool) {
 	processes.Get("/snapshots/:id/queries", processHandler.GetSnapshotQueries)
 	processes.Delete("/snapshots/:id", processHandler.DeleteSnapshot)
 
-	// Process info routes
-	processes.Get("/", processHandler.GetProcessInfos)
-	processes.Get("/:id", processHandler.GetProcessInfo)
-	processes.Get("/pid/:pid", processHandler.GetProcessInfosByProcessID)
-	processes.Delete("/:id", processHandler.DeleteProcessInfo)
-
 	// Query history and statistics
 	processes.Get("/queries/history", processHandler.GetQueryHistory)
 	processes.Get("/statistics", processHandler.GetStatistics)
+
+	// Process info routes
+	processes.Get("/", processHandler.GetProcessInfos)
+	processes.Get("/pid/:pid", processHandler.GetProcessInfosByProcessID)
+	processes.Get("/:id", processHandler.GetProcessInfo)
+	processes.Delete("/:id", processHandler.DeleteProcessInfo)
 
 	// Webhook routes (optional JWT - works with or without authentication)
 	// If authenticated: persists to user's snapshot

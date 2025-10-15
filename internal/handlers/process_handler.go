@@ -6,6 +6,7 @@ import (
 	"go-api/internal/db"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,63 +24,64 @@ func NewProcessHandler(dbpool *pgxpool.Pool) *ProcessHandler {
 
 // Response structures
 type AdjacentProcessResponse struct {
-	EProcessAddress *string `json:"eprocess_address,omitempty"`
-	ProcessName     *string `json:"process_name,omitempty"`
-	ProcessID       *int64  `json:"process_id,omitempty"`
+	EProcessAddress *string `json:"eprocessAddress,omitempty"`
+	ProcessName     *string `json:"processMame,omitempty"`
+	ProcessID       *int64  `json:"processId,omitempty"`
+	ID              *int64  `json:"id,omitempty"`
 }
 
 type ProcessInfoResponse struct {
 	ID                    int64                    `json:"id"`
-	SnapshotID            int64                    `json:"snapshot_id"`
-	UserID                *int64                   `json:"user_id,omitempty"`
-	ProcessID             int64                    `json:"process_id"`
-	ParentProcessID       int64                    `json:"parent_process_id"`
-	ProcessName           string                   `json:"process_name"`
-	ThreadCount           int32                    `json:"thread_count"`
-	HandleCount           int32                    `json:"handle_count"`
-	BasePriority          int32                    `json:"base_priority"`
-	CreateTime            string                   `json:"create_time"`
-	UserTime              int32                    `json:"user_time"`
-	KernelTime            int32                    `json:"kernel_time"`
-	WorkingSetSize        int64                    `json:"working_set_size"`
-	PeakWorkingSetSize    int64                    `json:"peak_working_set_size"`
-	VirtualSize           int64                    `json:"virtual_size"`
-	PeakVirtualSize       int64                    `json:"peak_virtual_size"`
-	ReadOperationCount    int64                    `json:"read_operation_count"`
-	WriteOperationCount   int64                    `json:"write_operation_count"`
-	OtherOperationCount   int64                    `json:"other_operation_count"`
-	ReadTransferCount     int64                    `json:"read_transfer_count"`
-	WriteTransferCount    int64                    `json:"write_transfer_count"`
-	OtherTransferCount    int64                    `json:"other_transfer_count"`
-	CurrentProcessAddress string                   `json:"current_process_address"`
-	NextProcess           *AdjacentProcessResponse `json:"next_process,omitempty"`
-	PreviousProcess       *AdjacentProcessResponse `json:"previous_process,omitempty"`
-	CreatedAt             string                   `json:"created_at"`
-	UpdatedAt             string                   `json:"updated_at"`
+	SnapshotID            int64                    `json:"snapshotId"`
+	UserID                *int64                   `json:"userId,omitempty"`
+	ProcessID             int64                    `json:"processId"`
+	ParentProcessID       int64                    `json:"parentProcessId"`
+	ProcessName           string                   `json:"processName"`
+	ThreadCount           int32                    `json:"threadCount"`
+	HandleCount           int32                    `json:"handleCount"`
+	BasePriority          int32                    `json:"basePriority"`
+	CreateTime            string                   `json:"createTime"`
+	UserTime              int32                    `json:"userTime"`
+	KernelTime            int32                    `json:"kernelTime"`
+	WorkingSetSize        int64                    `json:"workingSetSize"`
+	PeakWorkingSetSize    int64                    `json:"peakWorkingSetSize"`
+	VirtualSize           int64                    `json:"virtualSize"`
+	PeakVirtualSize       int64                    `json:"peakVirtualSize"`
+	ReadOperationCount    int64                    `json:"readOperationCount"`
+	WriteOperationCount   int64                    `json:"writeOperationCount"`
+	OtherOperationCount   int64                    `json:"otherOperationCount"`
+	ReadTransferCount     int64                    `json:"readTransferCount"`
+	WriteTransferCount    int64                    `json:"writeTransferCount"`
+	OtherTransferCount    int64                    `json:"otherTransferCount"`
+	CurrentProcessAddress string                   `json:"currentProcessAddress"`
+	NextProcess           *AdjacentProcessResponse `json:"nextProcess,omitempty"`
+	PreviousProcess       *AdjacentProcessResponse `json:"previousProcess,omitempty"`
+	CreatedAt             string                   `json:"createdAt"`
+	UpdatedAt             string                   `json:"updatedAt"`
 }
 
 type SnapshotResponse struct {
 	ID           int64   `json:"id"`
-	UserID       *int64  `json:"user_id,omitempty"`
+	UserID       *int64  `json:"userId,omitempty"`
 	WebhookURL   string  `json:"webhook_url"`
-	SnapshotType string  `json:"snapshot_type"`
-	ProcessCount int32   `json:"process_count"`
+	SnapshotType string  `json:"snapshotType"`
+	ProcessCount int32   `json:"processCount"`
 	Success      bool    `json:"success"`
-	ErrorMessage *string `json:"error_message,omitempty"`
-	CreatedAt    string  `json:"created_at"`
-	UpdatedAt    string  `json:"updated_at"`
+	ErrorMessage *string `json:"errorMessage,omitempty"`
+	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
 }
 
 type QueryHistoryResponse struct {
 	ID            int64   `json:"id"`
-	SnapshotID    int64   `json:"snapshot_id"`
-	UserID        *int64  `json:"user_id,omitempty"`
-	WebhookURL    string  `json:"webhook_url"`
-	RequestedPID  int32   `json:"requested_pid"`
-	ProcessInfoID *int64  `json:"process_info_id,omitempty"`
+	SnapshotID    int64   `json:"snapshotId"`
+	UserID        *int64  `json:"userId,omitempty"`
+	WebhookURL    string  `json:"webhookUrl"`
+	RequestedPID  int32   `json:"requestedPid"`
+	ProcessInfoID *int64  `json:"processInfoId,omitempty"`
 	Success       bool    `json:"success"`
-	ErrorMessage  *string `json:"error_message,omitempty"`
-	CreatedAt     string  `json:"created_at"`
+	ErrorMessage  *string `json:"errorMessage,omitempty"`
+	CreatedAt     string  `json:"createdAt"`
 }
 
 // Get all snapshots for a user
@@ -214,6 +216,7 @@ func (h *ProcessHandler) GetSnapshotsByType(c *fiber.Ctx) error {
 
 // Get a specific process info by ID
 func (h *ProcessHandler) GetProcessInfo(c *fiber.Ctx) error {
+	log.Debug("entrou no getProcessInfo")
 	userID := c.Locals("userID").(int64)
 
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
@@ -242,7 +245,11 @@ func (h *ProcessHandler) GetProcessInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(toProcessInfoResponse(processInfo))
+	processResponse := toProcessInfoResponse(processInfo)
+	log.Debug(processResponse.NextProcess.ID)
+	log.Debug(processResponse.NextProcess.ProcessID)
+	log.Debug(processResponse.NextProcess.ProcessName)
+	return c.JSON(processResponse)
 }
 
 // Get all processes for a user
@@ -478,6 +485,7 @@ func (h *ProcessHandler) GetStatistics(c *fiber.Ctx) error {
 
 	snapshotStats, err := h.queries.GetSnapshotStatistics(c.Context(), pgtype.Int8{Int64: userID, Valid: true})
 	if err != nil {
+		log.Debug(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to fetch snapshot statistics",
 		})
@@ -536,6 +544,10 @@ func toProcessInfoResponse(info db.ProcessInfo) ProcessInfoResponse {
 		if info.NextProcessID.Valid {
 			nextProcess.ProcessID = &info.NextProcessID.Int64
 		}
+		if info.NextID.Valid {
+			nextProcess.ID = &info.NextID.Int64
+		}
+
 		response.NextProcess = nextProcess
 	}
 
@@ -550,6 +562,10 @@ func toProcessInfoResponse(info db.ProcessInfo) ProcessInfoResponse {
 		if info.PreviousProcessID.Valid {
 			previousProcess.ProcessID = &info.PreviousProcessID.Int64
 		}
+		if info.PreviousID.Valid {
+			previousProcess.ID = &info.PreviousID.Int64
+		}
+
 		response.PreviousProcess = previousProcess
 	}
 

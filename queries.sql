@@ -78,17 +78,20 @@ INSERT INTO process_info (
     read_transfer_count,
     write_transfer_count,
     other_transfer_count,
+    page_fault_count,
     current_process_address,
     next_process_eprocess_address,
     next_process_name,
     next_process_id,
+    next_id,
     previous_process_eprocess_address,
     previous_process_name,
-    previous_process_id
+    previous_process_id,
+    previous_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-    $21, $22, $23, $24, $25, $26, $27, $28
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
 ) RETURNING *;
 
 -- name: GetProcessInfo :one
@@ -177,6 +180,7 @@ LIMIT $2;
 SELECT 
     COUNT(DISTINCT snapshot_id) as total_snapshots,
     COUNT(*) as total_processes,
-    AVG(process_count) as avg_processes_per_snapshot
-FROM process_info
-WHERE user_id = $1 OR user_id IS NULL;
+    COALESCE(AVG(process_count), 0) as avg_processes_per_snapshot
+FROM process_info pi
+LEFT JOIN process_snapshots ps ON ps.id = pi.snapshot_id
+WHERE pi.user_id = $1 OR pi.user_id IS NULL;

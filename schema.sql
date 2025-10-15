@@ -53,6 +53,7 @@ CREATE TABLE process_info (
     read_transfer_count BIGINT NOT NULL,
     write_transfer_count BIGINT NOT NULL,
     other_transfer_count BIGINT NOT NULL,
+    page_fault_count BIGINT NOT NULL,
     
     -- Process address
     current_process_address TEXT NOT NULL,
@@ -61,11 +62,13 @@ CREATE TABLE process_info (
     next_process_eprocess_address TEXT,
     next_process_name VARCHAR(255),
     next_process_id BIGINT,
+    next_id BIGINT REFERENCES process_info(id),
     
     -- Previous process information
     previous_process_eprocess_address TEXT,
     previous_process_name VARCHAR(255),
     previous_process_id BIGINT,
+    previous_id BIGINT REFERENCES process_info(id),
     
     -- Metadata
     created_at TIMESTAMP DEFAULT NOW(),

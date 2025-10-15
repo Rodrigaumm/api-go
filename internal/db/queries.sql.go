@@ -72,18 +72,21 @@ INSERT INTO process_info (
     read_transfer_count,
     write_transfer_count,
     other_transfer_count,
+    page_fault_count,
     current_process_address,
     next_process_eprocess_address,
     next_process_name,
     next_process_id,
+    next_id,
     previous_process_eprocess_address,
     previous_process_name,
-    previous_process_id
+    previous_process_id,
+    previous_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-    $21, $22, $23, $24, $25, $26, $27, $28
-) RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+) RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at
 `
 
 type CreateProcessInfoParams struct {
@@ -108,13 +111,16 @@ type CreateProcessInfoParams struct {
 	ReadTransferCount              int64       `json:"read_transfer_count"`
 	WriteTransferCount             int64       `json:"write_transfer_count"`
 	OtherTransferCount             int64       `json:"other_transfer_count"`
+	PageFaultCount                 int64       `json:"page_fault_count"`
 	CurrentProcessAddress          string      `json:"current_process_address"`
 	NextProcessEprocessAddress     pgtype.Text `json:"next_process_eprocess_address"`
 	NextProcessName                pgtype.Text `json:"next_process_name"`
 	NextProcessID                  pgtype.Int8 `json:"next_process_id"`
+	NextID                         pgtype.Int8 `json:"next_id"`
 	PreviousProcessEprocessAddress pgtype.Text `json:"previous_process_eprocess_address"`
 	PreviousProcessName            pgtype.Text `json:"previous_process_name"`
 	PreviousProcessID              pgtype.Int8 `json:"previous_process_id"`
+	PreviousID                     pgtype.Int8 `json:"previous_id"`
 }
 
 // ============================================
@@ -143,13 +149,16 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 		arg.ReadTransferCount,
 		arg.WriteTransferCount,
 		arg.OtherTransferCount,
+		arg.PageFaultCount,
 		arg.CurrentProcessAddress,
 		arg.NextProcessEprocessAddress,
 		arg.NextProcessName,
 		arg.NextProcessID,
+		arg.NextID,
 		arg.PreviousProcessEprocessAddress,
 		arg.PreviousProcessName,
 		arg.PreviousProcessID,
+		arg.PreviousID,
 	)
 	var i ProcessInfo
 	err := row.Scan(
@@ -175,13 +184,16 @@ func (q *Queries) CreateProcessInfo(ctx context.Context, arg CreateProcessInfoPa
 		&i.ReadTransferCount,
 		&i.WriteTransferCount,
 		&i.OtherTransferCount,
+		&i.PageFaultCount,
 		&i.CurrentProcessAddress,
 		&i.NextProcessEprocessAddress,
 		&i.NextProcessName,
 		&i.NextProcessID,
+		&i.NextID,
 		&i.PreviousProcessEprocessAddress,
 		&i.PreviousProcessName,
 		&i.PreviousProcessID,
+		&i.PreviousID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -378,7 +390,7 @@ func (q *Queries) GetMostQueriedProcesses(ctx context.Context, arg GetMostQuerie
 }
 
 const getProcessInfo = `-- name: GetProcessInfo :one
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info WHERE id = $1 LIMIT 1
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at FROM process_info WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, error) {
@@ -407,13 +419,16 @@ func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, er
 		&i.ReadTransferCount,
 		&i.WriteTransferCount,
 		&i.OtherTransferCount,
+		&i.PageFaultCount,
 		&i.CurrentProcessAddress,
 		&i.NextProcessEprocessAddress,
 		&i.NextProcessName,
 		&i.NextProcessID,
+		&i.NextID,
 		&i.PreviousProcessEprocessAddress,
 		&i.PreviousProcessName,
 		&i.PreviousProcessID,
+		&i.PreviousID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -421,7 +436,7 @@ func (q *Queries) GetProcessInfo(ctx context.Context, id int64) (ProcessInfo, er
 }
 
 const getProcessInfoBySnapshotAndPID = `-- name: GetProcessInfoBySnapshotAndPID :one
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at FROM process_info 
 WHERE snapshot_id = $1 AND process_id = $2
 LIMIT 1
 `
@@ -457,13 +472,16 @@ func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetPro
 		&i.ReadTransferCount,
 		&i.WriteTransferCount,
 		&i.OtherTransferCount,
+		&i.PageFaultCount,
 		&i.CurrentProcessAddress,
 		&i.NextProcessEprocessAddress,
 		&i.NextProcessName,
 		&i.NextProcessID,
+		&i.NextID,
 		&i.PreviousProcessEprocessAddress,
 		&i.PreviousProcessName,
 		&i.PreviousProcessID,
+		&i.PreviousID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -471,7 +489,7 @@ func (q *Queries) GetProcessInfoBySnapshotAndPID(ctx context.Context, arg GetPro
 }
 
 const getProcessInfosByProcessID = `-- name: GetProcessInfosByProcessID :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at FROM process_info 
 WHERE (user_id = $1 OR user_id IS NULL) AND process_id = $2
 ORDER BY created_at DESC
 `
@@ -513,13 +531,16 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 			&i.ReadTransferCount,
 			&i.WriteTransferCount,
 			&i.OtherTransferCount,
+			&i.PageFaultCount,
 			&i.CurrentProcessAddress,
 			&i.NextProcessEprocessAddress,
 			&i.NextProcessName,
 			&i.NextProcessID,
+			&i.NextID,
 			&i.PreviousProcessEprocessAddress,
 			&i.PreviousProcessName,
 			&i.PreviousProcessID,
+			&i.PreviousID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -534,7 +555,7 @@ func (q *Queries) GetProcessInfosByProcessID(ctx context.Context, arg GetProcess
 }
 
 const getProcessInfosBySnapshot = `-- name: GetProcessInfosBySnapshot :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at FROM process_info 
 WHERE snapshot_id = $1
 ORDER BY process_id ASC
 `
@@ -571,13 +592,16 @@ func (q *Queries) GetProcessInfosBySnapshot(ctx context.Context, snapshotID int6
 			&i.ReadTransferCount,
 			&i.WriteTransferCount,
 			&i.OtherTransferCount,
+			&i.PageFaultCount,
 			&i.CurrentProcessAddress,
 			&i.NextProcessEprocessAddress,
 			&i.NextProcessName,
 			&i.NextProcessID,
+			&i.NextID,
 			&i.PreviousProcessEprocessAddress,
 			&i.PreviousProcessName,
 			&i.PreviousProcessID,
+			&i.PreviousID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -592,7 +616,7 @@ func (q *Queries) GetProcessInfosBySnapshot(ctx context.Context, snapshotID int6
 }
 
 const getProcessInfosByUser = `-- name: GetProcessInfosByUser :many
-SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, previous_process_eprocess_address, previous_process_name, previous_process_id, created_at, updated_at FROM process_info 
+SELECT id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at FROM process_info 
 WHERE user_id = $1 OR user_id IS NULL
 ORDER BY created_at DESC
 `
@@ -629,13 +653,16 @@ func (q *Queries) GetProcessInfosByUser(ctx context.Context, userID pgtype.Int8)
 			&i.ReadTransferCount,
 			&i.WriteTransferCount,
 			&i.OtherTransferCount,
+			&i.PageFaultCount,
 			&i.CurrentProcessAddress,
 			&i.NextProcessEprocessAddress,
 			&i.NextProcessName,
 			&i.NextProcessID,
+			&i.NextID,
 			&i.PreviousProcessEprocessAddress,
 			&i.PreviousProcessName,
 			&i.PreviousProcessID,
+			&i.PreviousID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -885,15 +912,16 @@ const getSnapshotStatistics = `-- name: GetSnapshotStatistics :one
 SELECT 
     COUNT(DISTINCT snapshot_id) as total_snapshots,
     COUNT(*) as total_processes,
-    AVG(process_count) as avg_processes_per_snapshot
-FROM process_info
-WHERE user_id = $1 OR user_id IS NULL
+    COALESCE(AVG(process_count), 0) as avg_processes_per_snapshot
+FROM process_info pi
+LEFT JOIN process_snapshots ps ON ps.id = pi.snapshot_id
+WHERE pi.user_id = $1 OR pi.user_id IS NULL
 `
 
 type GetSnapshotStatisticsRow struct {
-	TotalSnapshots          int64   `json:"total_snapshots"`
-	TotalProcesses          int64   `json:"total_processes"`
-	AvgProcessesPerSnapshot float64 `json:"avg_processes_per_snapshot"`
+	TotalSnapshots          int64       `json:"total_snapshots"`
+	TotalProcesses          int64       `json:"total_processes"`
+	AvgProcessesPerSnapshot interface{} `json:"avg_processes_per_snapshot"`
 }
 
 func (q *Queries) GetSnapshotStatistics(ctx context.Context, userID pgtype.Int8) (GetSnapshotStatisticsRow, error) {

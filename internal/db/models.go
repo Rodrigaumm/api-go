@@ -31,13 +31,16 @@ type ProcessInfo struct {
 	ReadTransferCount              int64            `json:"read_transfer_count"`
 	WriteTransferCount             int64            `json:"write_transfer_count"`
 	OtherTransferCount             int64            `json:"other_transfer_count"`
+	PageFaultCount                 int64            `json:"page_fault_count"`
 	CurrentProcessAddress          string           `json:"current_process_address"`
 	NextProcessEprocessAddress     pgtype.Text      `json:"next_process_eprocess_address"`
 	NextProcessName                pgtype.Text      `json:"next_process_name"`
 	NextProcessID                  pgtype.Int8      `json:"next_process_id"`
+	NextID                         pgtype.Int8      `json:"next_id"`
 	PreviousProcessEprocessAddress pgtype.Text      `json:"previous_process_eprocess_address"`
 	PreviousProcessName            pgtype.Text      `json:"previous_process_name"`
 	PreviousProcessID              pgtype.Int8      `json:"previous_process_id"`
+	PreviousID                     pgtype.Int8      `json:"previous_id"`
 	CreatedAt                      pgtype.Timestamp `json:"created_at"`
 	UpdatedAt                      pgtype.Timestamp `json:"updated_at"`
 }
