@@ -995,6 +995,130 @@ func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const updateNextProcess = `-- name: UpdateNextProcess :one
+UPDATE process_info
+SET next_id = $1, next_process_id = $2, next_process_name = $3, next_process_eprocess_address = $4
+WHERE id = $5 RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at
+`
+
+type UpdateNextProcessParams struct {
+	NextID                     pgtype.Int8 `json:"next_id"`
+	NextProcessID              pgtype.Int8 `json:"next_process_id"`
+	NextProcessName            pgtype.Text `json:"next_process_name"`
+	NextProcessEprocessAddress pgtype.Text `json:"next_process_eprocess_address"`
+	ID                         int64       `json:"id"`
+}
+
+func (q *Queries) UpdateNextProcess(ctx context.Context, arg UpdateNextProcessParams) (ProcessInfo, error) {
+	row := q.db.QueryRow(ctx, updateNextProcess,
+		arg.NextID,
+		arg.NextProcessID,
+		arg.NextProcessName,
+		arg.NextProcessEprocessAddress,
+		arg.ID,
+	)
+	var i ProcessInfo
+	err := row.Scan(
+		&i.ID,
+		&i.SnapshotID,
+		&i.UserID,
+		&i.ProcessID,
+		&i.ParentProcessID,
+		&i.ProcessName,
+		&i.ThreadCount,
+		&i.HandleCount,
+		&i.BasePriority,
+		&i.CreateTime,
+		&i.UserTime,
+		&i.KernelTime,
+		&i.WorkingSetSize,
+		&i.PeakWorkingSetSize,
+		&i.VirtualSize,
+		&i.PeakVirtualSize,
+		&i.ReadOperationCount,
+		&i.WriteOperationCount,
+		&i.OtherOperationCount,
+		&i.ReadTransferCount,
+		&i.WriteTransferCount,
+		&i.OtherTransferCount,
+		&i.PageFaultCount,
+		&i.CurrentProcessAddress,
+		&i.NextProcessEprocessAddress,
+		&i.NextProcessName,
+		&i.NextProcessID,
+		&i.NextID,
+		&i.PreviousProcessEprocessAddress,
+		&i.PreviousProcessName,
+		&i.PreviousProcessID,
+		&i.PreviousID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePreviousProcess = `-- name: UpdatePreviousProcess :one
+UPDATE process_info
+SET previous_id = $1, previous_process_id = $2, previous_process_name = $3, previous_process_eprocess_address = $4
+WHERE id = $5 RETURNING id, snapshot_id, user_id, process_id, parent_process_id, process_name, thread_count, handle_count, base_priority, create_time, user_time, kernel_time, working_set_size, peak_working_set_size, virtual_size, peak_virtual_size, read_operation_count, write_operation_count, other_operation_count, read_transfer_count, write_transfer_count, other_transfer_count, page_fault_count, current_process_address, next_process_eprocess_address, next_process_name, next_process_id, next_id, previous_process_eprocess_address, previous_process_name, previous_process_id, previous_id, created_at, updated_at
+`
+
+type UpdatePreviousProcessParams struct {
+	PreviousID                     pgtype.Int8 `json:"previous_id"`
+	PreviousProcessID              pgtype.Int8 `json:"previous_process_id"`
+	PreviousProcessName            pgtype.Text `json:"previous_process_name"`
+	PreviousProcessEprocessAddress pgtype.Text `json:"previous_process_eprocess_address"`
+	ID                             int64       `json:"id"`
+}
+
+func (q *Queries) UpdatePreviousProcess(ctx context.Context, arg UpdatePreviousProcessParams) (ProcessInfo, error) {
+	row := q.db.QueryRow(ctx, updatePreviousProcess,
+		arg.PreviousID,
+		arg.PreviousProcessID,
+		arg.PreviousProcessName,
+		arg.PreviousProcessEprocessAddress,
+		arg.ID,
+	)
+	var i ProcessInfo
+	err := row.Scan(
+		&i.ID,
+		&i.SnapshotID,
+		&i.UserID,
+		&i.ProcessID,
+		&i.ParentProcessID,
+		&i.ProcessName,
+		&i.ThreadCount,
+		&i.HandleCount,
+		&i.BasePriority,
+		&i.CreateTime,
+		&i.UserTime,
+		&i.KernelTime,
+		&i.WorkingSetSize,
+		&i.PeakWorkingSetSize,
+		&i.VirtualSize,
+		&i.PeakVirtualSize,
+		&i.ReadOperationCount,
+		&i.WriteOperationCount,
+		&i.OtherOperationCount,
+		&i.ReadTransferCount,
+		&i.WriteTransferCount,
+		&i.OtherTransferCount,
+		&i.PageFaultCount,
+		&i.CurrentProcessAddress,
+		&i.NextProcessEprocessAddress,
+		&i.NextProcessName,
+		&i.NextProcessID,
+		&i.NextID,
+		&i.PreviousProcessEprocessAddress,
+		&i.PreviousProcessName,
+		&i.PreviousProcessID,
+		&i.PreviousID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateProcessSnapshotCount = `-- name: UpdateProcessSnapshotCount :exec
 UPDATE process_snapshots 
 SET process_count = $2, updated_at = NOW() 

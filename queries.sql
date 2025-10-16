@@ -94,6 +94,16 @@ INSERT INTO process_info (
     $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
 ) RETURNING *;
 
+-- name: UpdateNextProcess :one
+UPDATE process_info
+SET next_id = $1, next_process_id = $2, next_process_name = $3, next_process_eprocess_address = $4
+WHERE id = $5 RETURNING *;
+
+-- name: UpdatePreviousProcess :one
+UPDATE process_info
+SET previous_id = $1, previous_process_id = $2, previous_process_name = $3, previous_process_eprocess_address = $4
+WHERE id = $5 RETURNING *;
+
 -- name: GetProcessInfo :one
 SELECT * FROM process_info WHERE id = $1 LIMIT 1;
 

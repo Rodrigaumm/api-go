@@ -47,28 +47,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid request body",
+			"error": " Corpo da requisição inválido",
 		})
 	}
 
 	user, err := h.queries.GetUserByName(context.Background(), req.Name)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{
-			"error": "Invalid credentials",
+			"error": "Credenciais inválidas",
 		})
 	}
 
 	hashedPassword := hashPassword(req.Password)
 	if user.Password != hashedPassword {
 		return c.Status(401).JSON(fiber.Map{
-			"error": "Invalid credentials",
+			"error": "Credenciais inválidas",
 		})
 	}
 
 	token, err := generateJWT(user.ID, user.Name)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to generate token",
+			"error": "Falha ao gerar o token",
 		})
 	}
 
@@ -119,5 +119,5 @@ func verifyJWT(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, fmt.Errorf("invalid token")
+	return nil, fmt.Errorf("token inválido")
 }

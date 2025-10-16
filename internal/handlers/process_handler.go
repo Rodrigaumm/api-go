@@ -24,8 +24,8 @@ func NewProcessHandler(dbpool *pgxpool.Pool) *ProcessHandler {
 
 // Response structures
 type AdjacentProcessResponse struct {
-	EProcessAddress *string `json:"eprocessAddress,omitempty"`
-	ProcessName     *string `json:"processMame,omitempty"`
+	EProcessAddress *string `json:"eProcessAddress,omitempty"`
+	ProcessName     *string `json:"processName,omitempty"`
 	ProcessID       *int64  `json:"processId,omitempty"`
 	ID              *int64  `json:"id,omitempty"`
 }

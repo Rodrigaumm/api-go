@@ -50,6 +50,8 @@ type Querier interface {
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserByName(ctx context.Context, name string) (User, error)
 	GetUsers(ctx context.Context) ([]User, error)
+	UpdateNextProcess(ctx context.Context, arg UpdateNextProcessParams) (ProcessInfo, error)
+	UpdatePreviousProcess(ctx context.Context, arg UpdatePreviousProcessParams) (ProcessInfo, error)
 	UpdateProcessSnapshotCount(ctx context.Context, arg UpdateProcessSnapshotCountParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
